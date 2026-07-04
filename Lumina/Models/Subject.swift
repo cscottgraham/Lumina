@@ -1,61 +1,78 @@
 import Foundation
 import SwiftData
 
-/// A research topic/project — the top-level organizing unit. Everything the
-/// user captures lives inside a Subject, and the Claude chat for a Subject is
-/// grounded in that Subject's content.
-///
-/// CloudKit note: every stored property has a default value and every
-/// relationship is optional, as required for a CloudKit-backed ModelContainer.
-@Model
-final class Subject {
-    /// Stable identity that survives across devices/sync.
-    var id: UUID = UUID()
-    var title: String = ""
-    var subjectDescription: String = ""
-    var accentRaw: String = AccentTheme.aurora.rawValue
-    var emoji: String = "✨"
-    var isPinned: Bool = false
-    var createdAt: Date = Date()
-    var updatedAt: Date = Date()
+extension LuminaSchemaV1 {
+    /// A research topic/project — the top-level organizing unit. Items live in
+    /// one **or more** Subjects (many-to-many); each Subject also carries the
+    /// user's own research notes and the full LLM conversation history.
+    ///
+    /// CloudKit note: every stored property has a default value and every
+    /// relationship is optional, as required for a CloudKit-backed container.
+    @Model
+    final class Subject {
+        /// Stable identity that survives across devices/sync.
+        var id: UUID = UUID()
+        var title: String = ""
+        var subjectDescription: String = ""
+        var accentRaw: String = AccentTheme.aurora.rawValue
+        var emoji: String = "✨"
+        var isPinned: Bool = false
+        var isArchived: Bool = false
+        var createdAt: Date = Date()
+        var updatedAt: Date = Date()
 
-    /// A rolling, LLM-generated digest of the subject's content, cached to keep
-    /// chat context compact (see ContextBuilder). Refreshed as content changes.
-    var digest: String = ""
-    var digestUpdatedAt: Date?
+        /// The user's own subject-level scratchpad (markdown): hypotheses,
+        /// open questions, reading lists. Distinct from `digest` (AI-written)
+        /// and from ContentItems (captured material). Fed to Claude as part of
+        /// the subject spine.
+        var researchNotes: String = ""
 
-    // MARK: Relationships (all optional for CloudKit; cascade delete children)
+        /// A rolling, LLM-generated digest of the subject's content, cached to
+        /// keep chat context compact (see ContextBuilder). Refreshed as content
+        /// changes (Phase 3 background job).
+        var digest: String = ""
+        var digestUpdatedAt: Date?
 
-    @Relationship(deleteRule: .cascade, inverse: \ContentItem.subject)
-    var items: [ContentItem]? = []
+        // MARK: Relationships (all optional for CloudKit)
 
-    /// Subcategories. Deleting a subject cascades; deleting a topic keeps items.
-    @Relationship(deleteRule: .cascade, inverse: \Topic.subject)
-    var topics: [Topic]? = []
+        /// Items in this subject. MANY-TO-MANY: an item may belong to several
+        /// subjects, so deleting a subject must NOT cascade into items — see
+        /// `delete(_:from:)` for the orphan-aware removal flow.
+        @Relationship(deleteRule: .nullify, inverse: \ContentItem.subjects)
+        var items: [ContentItem]? = []
 
-    @Relationship(deleteRule: .cascade, inverse: \ChatThread.subject)
-    var threads: [ChatThread]? = []
+        /// Subcategories. Cascade: topics are meaningless without the subject
+        /// (their items survive — Topic→items is `.nullify`).
+        @Relationship(deleteRule: .cascade, inverse: \Topic.subject)
+        var topics: [Topic]? = []
 
-    @Relationship(inverse: \Tag.subjects)
-    var tags: [Tag]? = []
+        /// LLM conversation history. Cascade: threads are scoped to the subject.
+        @Relationship(deleteRule: .cascade, inverse: \ChatThread.subject)
+        var threads: [ChatThread]? = []
 
-    init(
-        title: String = "",
-        subjectDescription: String = "",
-        accent: AccentTheme = .aurora,
-        emoji: String = "✨"
-    ) {
-        self.id = UUID()
-        self.title = title
-        self.subjectDescription = subjectDescription
-        self.accentRaw = accent.rawValue
-        self.emoji = emoji
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        @Relationship(inverse: \Tag.subjects)
+        var tags: [Tag]? = []
+
+        init(
+            title: String = "",
+            subjectDescription: String = "",
+            accent: AccentTheme = .aurora,
+            emoji: String = "✨"
+        ) {
+            self.id = UUID()
+            self.title = title
+            self.subjectDescription = subjectDescription
+            self.accentRaw = accent.rawValue
+            self.emoji = emoji
+            self.createdAt = Date()
+            self.updatedAt = Date()
+        }
     }
+}
 
-    // MARK: Convenience
+// MARK: - Computed properties & helpers
 
+extension Subject {
     var accent: AccentTheme {
         get { AccentTheme(rawValue: accentRaw) ?? .aurora }
         set { accentRaw = newValue.rawValue }
@@ -63,6 +80,7 @@ final class Subject {
 
     var itemCount: Int { items?.count ?? 0 }
 
+    /// Newest first — the default browsing order.
     var sortedItems: [ContentItem] {
         (items ?? []).sorted { $0.createdAt > $1.createdAt }
     }
@@ -71,5 +89,61 @@ final class Subject {
         (topics ?? []).sorted { ($0.order, $0.createdAt) < ($1.order, $1.createdAt) }
     }
 
+    /// Items grouped by kind — powers "12 photos · 3 audio · 8 notes" summaries.
+    var itemCountsByKind: [ContentKind: Int] {
+        Dictionary(grouping: items ?? [], by: \.kind).mapValues(\.count)
+    }
+
+    /// Items not filed under any topic (shown at the subject level).
+    var untopicedItems: [ContentItem] {
+        sortedItems.filter { $0.topic == nil }
+    }
+
+    // MARK: Conversation history
+
+    /// Threads, most recently active first.
+    var sortedThreads: [ChatThread] {
+        (threads ?? []).sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    /// The most recently active conversation, if any — lets "Research" resume
+    /// where the user left off instead of always starting fresh.
+    var latestThread: ChatThread? { sortedThreads.first }
+
+    /// Total estimated Claude spend across every thread in this subject.
+    var totalResearchCostUSD: Double {
+        (threads ?? []).reduce(0) { $0 + $1.estimatedCostUSD }
+    }
+
+    /// The newest photo/video item that has media — drives `SubjectBackdrop`.
+    var heroMediaItem: ContentItem? {
+        sortedItems.first { ($0.kind == .photo || $0.kind == .video) && $0.primaryAttachment != nil }
+    }
+
     func touch() { updatedAt = Date() }
+
+    // MARK: Deletion (many-to-many aware)
+
+    /// Deletes a subject safely. Because items are shared (many-to-many),
+    /// SwiftData's `.nullify` only removes the membership — this helper also
+    /// deletes items that belonged to *no other* subject (and their media
+    /// files), so nothing is silently orphaned.
+    @MainActor
+    static func delete(_ subject: Subject, in context: ModelContext,
+                       mediaStore: MediaStore = .shared,
+                       deleteExclusiveItems: Bool = true) {
+        if deleteExclusiveItems {
+            for item in subject.items ?? [] where (item.subjects ?? []).count <= 1 {
+                for attachment in item.attachments ?? [] {
+                    mediaStore.deleteFile(relativePath: attachment.relativePath)
+                    if let thumb = attachment.thumbnailRelativePath {
+                        mediaStore.deleteFile(relativePath: thumb)
+                    }
+                }
+                context.delete(item)
+            }
+        }
+        context.delete(subject)   // cascades topics + threads; nullifies items
+        try? context.save()
+    }
 }

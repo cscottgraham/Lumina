@@ -30,8 +30,9 @@ struct ItemEnrichmentService {
         guard !body.isEmpty else { return }
         guard item.aiEnrichedAt == nil else { return } // don't re-enrich
 
-        let subjectTitle = item.subject?.title ?? "General research"
-        let digest = item.subject?.digest ?? ""
+        // Items can belong to several subjects; enrich against the primary one.
+        let subjectTitle = item.primarySubject?.title ?? "General research"
+        let digest = item.primarySubject?.digest ?? ""
         let topicLine = item.topic.map { "Topic: \($0.title)\n" } ?? ""
 
         let question = """

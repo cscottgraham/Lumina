@@ -2,7 +2,9 @@ import Foundation
 import SwiftData
 
 /// Builds the app's `ModelContainer`. Local-first with iCloud sync via a
-/// CloudKit-backed configuration.
+/// CloudKit-backed configuration, and enrolled in schema versioning from day
+/// one (`LuminaSchemaV1` + `LuminaMigrationPlan` — see Models/LuminaSchema.swift
+/// for the full migration strategy).
 ///
 /// CloudKit requirements (already satisfied by the models): every attribute has
 /// a default or is optional, all relationships are optional, no `.unique`
@@ -10,15 +12,9 @@ import SwiftData
 /// `iCloud.com.lumina.app` (see project.yml entitlements).
 enum PersistenceController {
 
-    static let schema = Schema([
-        Subject.self,
-        Topic.self,
-        ContentItem.self,
-        Attachment.self,
-        Tag.self,
-        ChatThread.self,
-        ChatMessage.self,
-    ])
+    /// The schema is always derived from the CURRENT versioned schema so the
+    /// container and the migration plan can never drift apart.
+    static let schema = Schema(versionedSchema: LuminaSchemaV1.self)
 
     /// The production container (private CloudKit DB).
     static func makeContainer(inMemory: Bool = false) -> ModelContainer {
@@ -33,13 +29,21 @@ enum PersistenceController {
             )
         }
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            return try ModelContainer(
+                for: schema,
+                migrationPlan: LuminaMigrationPlan.self,
+                configurations: [config]
+            )
         } catch {
             // In development, fall back to a local-only store so a missing
             // iCloud entitlement doesn't hard-crash the app.
             let local = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
-            return (try? ModelContainer(for: schema, configurations: [local]))
-                ?? { fatalError("Could not create ModelContainer: \(error)") }()
+            return (try? ModelContainer(
+                for: schema,
+                migrationPlan: LuminaMigrationPlan.self,
+                configurations: [local]
+            ))
+            ?? { fatalError("Could not create ModelContainer: \(error)") }()
         }
     }
 

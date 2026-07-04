@@ -33,6 +33,7 @@ struct ContextBuilder {
 
         # SUBJECT: \(subject.title)
         \(subject.subjectDescription.isEmpty ? "" : subject.subjectDescription + "\n")
+        \(subject.researchNotes.isEmpty ? "" : "## The user's own research notes\n\(String(subject.researchNotes.prefix(2_000)))\n")
         \(contextBody)
         """
 

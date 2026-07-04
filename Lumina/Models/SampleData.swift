@@ -50,14 +50,22 @@ enum SampleData {
         n2.locationName = "Home office"
         if let paperTag { store.attach(paperTag, to: n2) }
 
-        let n3 = ContentItem(kind: .voiceNote, title: "Idea while walking",
+        // Audio recording with transcript, dictated provenance, geotag.
+        let n3 = ContentItem(kind: .audio, title: "Idea while walking",
                              text: "What if we used the vault's own notes as few-shot examples for the research chat?",
-                             subject: quantum)
+                             subject: quantum, captureMethod: .dictated)
         n3.sourceDetail = "Voice memo"
         n3.locationName = "Brockville, ON"
         if let ideaTag { store.attach(ideaTag, to: n3) }
 
-        [n1, n2, n3].forEach(context.insert)
+        // Exercise many-to-many: one item shared between two subjects.
+        let n4 = ContentItem(kind: .webSnippet, title: "Attention is all you need… for UI?",
+                             text: "Essay arguing spatial interfaces will follow the same scaling curve as language models.",
+                             subjects: [quantum, design], captureMethod: .shared)
+        n4.sourceURL = URL(string: "https://example.com/spatial-scaling")
+        n4.sourceTitle = "Spatial interfaces and scaling"
+
+        [n1, n2, n3, n4].forEach(context.insert)
 
         try? context.save()
     }

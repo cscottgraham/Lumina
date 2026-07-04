@@ -1,25 +1,26 @@
 import Foundation
 
-/// The kind of a `ContentItem`. Stored as its `String` raw value so it is
-/// CloudKit-safe and query-friendly.
+// Plain Codable enums stored as String raw values on the models — CloudKit-safe
+// and query-friendly. These are NOT versioned with the schema: add cases
+// freely, never remove/rename a shipped raw value (decode falls back safely).
+
+/// The kind of a `ContentItem`.
 enum ContentKind: String, Codable, CaseIterable, Identifiable, Sendable {
-    case note          // typed text
-    case voiceNote     // audio recording + transcript
-    case audio         // imported/attached audio
-    case photo
-    case video
-    case webSnippet    // saved web page excerpt + metadata
-    case document      // pdf / file
+    case photo         // image; Attachment carries original + thumbnail
+    case video         // Attachment carries original + poster-frame thumbnail
+    case audio         // recording (voice memo, interview…); `text` = transcript
+    case note          // text note — typed or dictated (see CaptureMethod)
+    case webSnippet    // URL + title + selected text (+ screenshot attachment)
+    case document      // pdf / file import
 
     var id: String { rawValue }
 
     var systemImage: String {
         switch self {
-        case .note:       return "text.alignleft"
-        case .voiceNote:  return "waveform"
-        case .audio:      return "music.note"
         case .photo:      return "photo"
         case .video:      return "video"
+        case .audio:      return "waveform"
+        case .note:       return "text.alignleft"
         case .webSnippet: return "safari"
         case .document:   return "doc.richtext"
         }
@@ -27,23 +28,52 @@ enum ContentKind: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .note:       return "Note"
-        case .voiceNote:  return "Voice Note"
-        case .audio:      return "Audio"
         case .photo:      return "Photo"
         case .video:      return "Video"
+        case .audio:      return "Audio"
+        case .note:       return "Note"
         case .webSnippet: return "Web Snippet"
         case .document:   return "Document"
         }
     }
 
-    /// Whether this kind carries an on-disk media file (vs. pure text).
+    /// Whether this kind's *primary* payload is an on-disk media file.
+    /// (A webSnippet may still carry a screenshot as a `.screenshot` attachment.)
     var hasMediaFile: Bool {
         switch self {
         case .note, .webSnippet: return false
-        default: return true
+        case .photo, .video, .audio, .document: return true
         }
     }
+}
+
+/// HOW an item entered the vault — dictation vs typing is provenance, not a
+/// separate content kind.
+enum CaptureMethod: String, Codable, CaseIterable, Identifiable, Sendable {
+    case typed        // keyboard entry
+    case dictated     // live speech-to-text (or transcribed recording)
+    case imported     // photo library / files picker
+    case shared       // arrived via the share extension (web snippets)
+    case captured     // in-app camera/microphone capture
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .typed: return "Typed"
+        case .dictated: return "Dictated"
+        case .imported: return "Imported"
+        case .shared: return "Shared in"
+        case .captured: return "Captured"
+        }
+    }
+}
+
+/// What an `Attachment` is, relative to its item.
+enum AttachmentRole: String, Codable, CaseIterable, Sendable {
+    case original     // the primary media file (photo/video/audio/document)
+    case screenshot   // e.g. a webSnippet's page screenshot
+    case supplement   // any extra file attached alongside the primary
 }
 
 /// Author of a chat message.

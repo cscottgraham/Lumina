@@ -1,108 +1,192 @@
 import Foundation
 import SwiftData
+import CoreLocation
 
-/// A single captured item inside a Subject: a note, photo, video, audio/voice
-/// note, web snippet, or document. Text lives here; binary media lives on disk
-/// (see `Attachment`), referenced by relative path — never stored in the DB.
-@Model
-final class ContentItem {
-    var id: UUID = UUID()
-    var kindRaw: String = ContentKind.note.rawValue
+extension LuminaSchemaV1 {
+    /// A single captured item: photo, video, audio recording, text note
+    /// (typed or dictated), web snippet, or document.
+    ///
+    /// • Belongs to **one or more Subjects** (many-to-many) and optionally one
+    ///   Topic within them.
+    /// • Text lives here; binary media lives on disk as `Attachment`s
+    ///   (relative paths — never blobs in the DB).
+    /// • `text` is the single LLM-facing surface: note body, audio transcript,
+    ///   snippet's selected text, or an OCR/caption for media. ContextBuilder
+    ///   feeds it (plus `aiSummary`, tags, topic) to Claude.
+    @Model
+    final class ContentItem {
+        var id: UUID = UUID()
+        var kindRaw: String = ContentKind.note.rawValue
+        /// How it entered the vault (typed/dictated/imported/shared/captured).
+        var captureMethodRaw: String = CaptureMethod.typed.rawValue
 
-    /// Short user-facing title (auto-derived if empty).
-    var title: String = ""
-    /// Primary text payload: the note body, the voice-note transcript, the web
-    /// snippet excerpt, or an OCR/caption for media. This is what the
-    /// ContextBuilder feeds to Claude.
-    var text: String = ""
+        /// Short user-facing title (auto-derived if empty).
+        var title: String = ""
+        /// Primary text payload (see type doc above).
+        var text: String = ""
 
-    /// Optional source metadata for web snippets.
-    var sourceURL: URL?
-    var sourceTitle: String?
-    var author: String?
+        // MARK: Web-snippet source (URL, page title, author)
+        var sourceURL: URL?
+        var sourceTitle: String?
+        var author: String?
 
-    // MARK: Source provenance (where/when this came from)
+        // MARK: Provenance (when/where this came from)
 
-    /// When the source was captured/observed (may differ from `createdAt`,
-    /// e.g. importing an old photo). Nil → treat `createdAt` as capture time.
-    var capturedAt: Date?
-    /// Free-form origin note, e.g. "Voice memo while driving", "Lab whiteboard".
-    var sourceDetail: String?
-    /// Optional geotag for where the item was captured.
-    var latitude: Double?
-    var longitude: Double?
-    var locationName: String?
+        /// When the source was captured/observed (may differ from `createdAt`,
+        /// e.g. importing an old photo). Nil → treat `createdAt` as capture time.
+        var capturedAt: Date?
+        /// Free-form origin note, e.g. "Voice memo while driving", "Lecture".
+        var sourceDetail: String?
+        /// Optional geotag.
+        var latitude: Double?
+        var longitude: Double?
+        var locationName: String?
 
-    // MARK: AI enrichment (written by ItemEnrichmentService)
+        // MARK: AI enrichment (written by ItemEnrichmentService)
 
-    /// Claude's evaluation of the item: a short summary plus relevant related
-    /// context. Fed back into research chat via ContextBuilder.
-    var aiSummary: String = ""
-    var aiEnrichedAt: Date?
+        /// Claude's evaluation: short summary + relevant related context.
+        var aiSummary: String = ""
+        var aiEnrichedAt: Date?
 
-    var isFavorite: Bool = false
-    var createdAt: Date = Date()
-    var updatedAt: Date = Date()
+        var isFavorite: Bool = false
+        var createdAt: Date = Date()
+        var updatedAt: Date = Date()
 
-    // MARK: Relationships
+        // MARK: Relationships (all optional for CloudKit)
 
-    var subject: Subject?
-    /// Optional subcategory within the subject.
-    var topic: Topic?
+        /// MANY-TO-MANY: the subjects this item belongs to (≥1, app-enforced —
+        /// CloudKit forbids required relationships). Inverse on Subject.items.
+        var subjects: [Subject]? = []
 
-    @Relationship(deleteRule: .cascade, inverse: \Attachment.item)
-    var attachments: [Attachment]? = []
+        /// Optional subcategory. App-level invariant: `topic.subject` should be
+        /// one of `subjects` (see `topicIsConsistent`).
+        var topic: Topic?
 
-    @Relationship(inverse: \Tag.items)
-    var tags: [Tag]? = []
+        @Relationship(deleteRule: .cascade, inverse: \Attachment.item)
+        var attachments: [Attachment]? = []
 
-    init(
-        kind: ContentKind,
-        title: String = "",
-        text: String = "",
-        subject: Subject? = nil
-    ) {
-        self.id = UUID()
-        self.kindRaw = kind.rawValue
-        self.title = title
-        self.text = text
-        self.subject = subject
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        @Relationship(inverse: \Tag.items)
+        var tags: [Tag]? = []
+
+        init(
+            kind: ContentKind,
+            title: String = "",
+            text: String = "",
+            subjects: [Subject] = [],
+            captureMethod: CaptureMethod = .typed
+        ) {
+            self.id = UUID()
+            self.kindRaw = kind.rawValue
+            self.captureMethodRaw = captureMethod.rawValue
+            self.title = title
+            self.text = text
+            self.subjects = subjects
+            self.createdAt = Date()
+            self.updatedAt = Date()
+        }
     }
+}
 
-    // MARK: Convenience
+// MARK: - Computed properties & helpers
+
+extension ContentItem {
+    /// Back-compat convenience: single-subject creation.
+    convenience init(kind: ContentKind, title: String = "", text: String = "",
+                     subject: Subject?, captureMethod: CaptureMethod = .typed) {
+        self.init(kind: kind, title: title, text: text,
+                  subjects: subject.map { [$0] } ?? [], captureMethod: captureMethod)
+    }
 
     var kind: ContentKind {
         get { ContentKind(rawValue: kindRaw) ?? .note }
         set { kindRaw = newValue.rawValue }
     }
 
-    /// The main media attachment (first one), if any.
-    var primaryAttachment: Attachment? {
-        (attachments ?? []).sorted { $0.order < $1.order }.first
-    }
-
-    /// A display title even when the user didn't set one.
-    var resolvedTitle: String {
-        if !title.isEmpty { return title }
-        if !text.isEmpty { return String(text.prefix(60)) }
-        return kind.title
-    }
-
-    /// "Jul 4, 2026 · Brockville · Voice memo" — a one-line provenance summary.
-    var provenanceLine: String? {
-        var parts: [String] = []
-        let f = DateFormatter(); f.dateStyle = .medium
-        parts.append(f.string(from: capturedAt ?? createdAt))
-        if let locationName, !locationName.isEmpty { parts.append(locationName) }
-        if let sourceDetail, !sourceDetail.isEmpty { parts.append(sourceDetail) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    var captureMethod: CaptureMethod {
+        get { CaptureMethod(rawValue: captureMethodRaw) ?? .typed }
+        set { captureMethodRaw = newValue.rawValue }
     }
 
     var sortedTags: [Tag] {
         (tags ?? []).sorted { $0.normalizedName < $1.normalizedName }
     }
 
-    func touch() { updatedAt = Date(); subject?.touch() }
+    /// First subject — for single-subject contexts (enrichment, display).
+    var primarySubject: Subject? { subjects?.first }
+
+    /// App-level invariant check: a topic must belong to one of the item's
+    /// subjects. Call before assigning `topic` from pickers.
+    var topicIsConsistent: Bool {
+        guard let topic, let topicSubject = topic.subject else { return true }
+        return (subjects ?? []).contains { $0.id == topicSubject.id }
+    }
+
+    // MARK: Media conveniences
+
+    /// The primary media attachment (`role == .original`, lowest order).
+    var primaryAttachment: Attachment? {
+        (attachments ?? [])
+            .filter { $0.role == .original }
+            .sorted { $0.order < $1.order }
+            .first
+            ?? (attachments ?? []).sorted { $0.order < $1.order }.first
+    }
+
+    /// A web snippet's page screenshot, if one was captured.
+    var snippetScreenshot: Attachment? {
+        guard kind == .webSnippet else { return nil }
+        return (attachments ?? []).first { $0.role == .screenshot }
+    }
+
+    /// Absolute URL of the original media file (resolved via MediaStore).
+    var originalMediaURL: URL? {
+        primaryAttachment.map { MediaStore.shared.absoluteURL(for: $0.relativePath) }
+    }
+
+    /// Absolute URL of the cached thumbnail, if generated.
+    var thumbnailMediaURL: URL? {
+        guard let path = primaryAttachment?.thumbnailRelativePath
+                ?? snippetScreenshot?.thumbnailRelativePath else { return nil }
+        return MediaStore.shared.absoluteURL(for: path)
+    }
+
+    /// Playback duration for audio/video (0 otherwise).
+    var mediaDuration: Double { primaryAttachment?.duration ?? 0 }
+
+    /// True when an audio/video item has a usable transcript in `text`.
+    var hasTranscript: Bool {
+        (kind == .audio || kind == .video) && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    // MARK: Display conveniences
+
+    /// A display title even when the user didn't set one.
+    var resolvedTitle: String {
+        if !title.isEmpty { return title }
+        if kind == .webSnippet, let sourceTitle, !sourceTitle.isEmpty { return sourceTitle }
+        if !text.isEmpty { return String(text.prefix(60)) }
+        return kind.title
+    }
+
+    /// Geotag as a CoreLocation coordinate, when present.
+    var coordinate: CLLocationCoordinate2D? {
+        guard let latitude, let longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    /// "Jul 4, 2026 · Brockville · Voice memo" — one-line provenance summary.
+    var provenanceLine: String? {
+        var parts: [String] = []
+        let f = DateFormatter(); f.dateStyle = .medium
+        parts.append(f.string(from: capturedAt ?? createdAt))
+        if let locationName, !locationName.isEmpty { parts.append(locationName) }
+        if let sourceDetail, !sourceDetail.isEmpty { parts.append(sourceDetail) }
+        else if captureMethod == .dictated { parts.append(CaptureMethod.dictated.title) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    func touch() {
+        updatedAt = Date()
+        subjects?.forEach { $0.touch() }
+    }
 }
