@@ -1,0 +1,30 @@
+# Xcode / Swift
+.DS_Store
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+
+# XcodeGen generates the project; don't commit it
+Lumina.xcodeproj/
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+Package.resolved
+
+# Secrets — the Claude API key lives in the iOS Keychain, never in the repo
+*.xcconfig.local
+Secrets.plist
+.env
+
+# Fastlane / misc
+fastlane/report.xml
+fastlane/screenshots
+*.ipa
+*.dSYM.zip

@@ -1,0 +1,46 @@
+# XcodeGen spec — generates Lumina.xcodeproj on a Mac.
+#   brew install xcodegen && xcodegen generate
+# Then: open Lumina.xcodeproj  (see docs/BUILD_ON_MAC.md)
+name: Lumina
+options:
+  bundleIdPrefix: com.lumina
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: "" # ← set your Apple Developer Team ID here
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_PREVIEWS: true
+
+targets:
+  Lumina:
+    type: application
+    platform: iOS
+    sources:
+      - path: Lumina
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lumina.app
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark          # dark-mode-first
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Lumina records voice notes and audio you attach to your research."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Lumina captures photos and videos for your research subjects."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Lumina imports photos and videos into your research vault."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Lumina transcribes your voice notes on-device."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Lumina can tag captured items with where you were, so your research keeps its context."
+        # iCloud + CloudKit for local-first sync (enable the capabilities in Xcode too)
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
+    entitlements:
+      path: Lumina/Lumina.entitlements
+      properties:
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.lumina.app
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.lumina.app
+        aps-environment: development
