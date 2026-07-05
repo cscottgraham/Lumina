@@ -40,6 +40,9 @@ targets:
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Lumina imports photos and videos into your research vault."
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Lumina transcribes your voice notes on-device."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Lumina can tag captured items with where you were, so your research keeps its context."
+        # Standard HTTPS-only encryption → exempt; declaring it skips the
+        # export-compliance question that otherwise blocks TestFlight builds.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: false
         # iCloud + CloudKit for local-first sync (enable the capabilities in Xcode too)
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
     entitlements:
@@ -49,8 +52,8 @@ targets:
           - iCloud.com.lumina.app
         com.apple.developer.icloud-services:
           - CloudKit
-        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.lumina.app
-        aps-environment: development
+        # No aps-environment: we don't use push directly, and declaring
+        # 'development' conflicts with App Store distribution profiles.
 
   LuminaTests:
     type: bundle.unit-test

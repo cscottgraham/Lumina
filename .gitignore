@@ -18,10 +18,20 @@ Lumina.xcodeproj/
 Packages/
 Package.resolved
 
-# Secrets — the Claude API key lives in the iOS Keychain, never in the repo
+# Secrets — API keys live in the iOS Keychain, never in the repo
 *.xcconfig.local
 Secrets.plist
 .env
+
+# Code-signing material — lives in C:\Users\drcsg\Projects\Lumina-signing and
+# GitHub Actions secrets; must never be committed even if copied here.
+*.key
+*.csr
+*.cer
+*.pem
+*.p12
+*.mobileprovision
+AuthKey_*.p8
 
 # Fastlane / misc
 fastlane/report.xml
