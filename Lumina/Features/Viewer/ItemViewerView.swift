@@ -60,6 +60,7 @@ struct ItemViewerView: View {
 
 // MARK: - Photo (zoom + pan, downsampled load)
 
+@MainActor
 private struct PhotoZoomViewer: View {
     let item: ContentItem
     @Environment(\.mediaStore) private var mediaStore
@@ -133,6 +134,7 @@ private struct PhotoZoomViewer: View {
 
 // MARK: - Video
 
+@MainActor
 private struct VideoViewer: View {
     let item: ContentItem
     @Environment(\.mediaStore) private var mediaStore
@@ -158,6 +160,7 @@ private struct VideoViewer: View {
 
 // MARK: - Audio
 
+@MainActor
 private struct AudioViewer: View {
     let item: ContentItem
     let accent: AccentTheme
@@ -231,6 +234,7 @@ private struct AudioViewer: View {
 
 // MARK: - Reader (note / web snippet / document)
 
+@MainActor
 private struct ReaderViewer: View {
     let item: ContentItem
     let accent: AccentTheme
