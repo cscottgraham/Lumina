@@ -125,8 +125,8 @@ struct SubjectDetailView: View {
         HStack {
             Text(selectedTopic.map { $0.title } ?? "Items").luminaText(LuminaFont.title2())
             Spacer()
-            GlassButton("Add", systemImage: "plus", accent: accent, weight: .secondary) {
-                router.sheet = .newNote(subject)
+            GlassButton("Capture", systemImage: "plus", accent: accent, weight: .secondary) {
+                router.sheet = .capture(subject)
             }
             .fixedSize()
         }

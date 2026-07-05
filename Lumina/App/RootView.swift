@@ -1,8 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// The glass navigation shell. A custom floating glass tab bar over the aurora,
-/// hosting the three primary areas.
+/// The glass navigation shell: aurora backdrop, four tabs in the floating
+/// glass tab bar, and a gradient capture button docked above it. Tab content
+/// cross-fades; pushes use the system stack.
 struct RootView: View {
     @Environment(AppRouter.self) private var router
 
@@ -14,6 +15,8 @@ struct RootView: View {
 
             Group {
                 switch router.selectedTab {
+                case .library:
+                    NavigationStack { LibraryView() }
                 case .subjects:
                     NavigationStack(path: $router.subjectsPath) {
                         SubjectsListView()
@@ -25,42 +28,48 @@ struct RootView: View {
                             }
                     }
                 case .search:
-                    SearchPlaceholderView()
+                    SearchView()
                 case .settings:
                     SettingsView()
                 }
             }
-            .safeAreaPadding(.bottom, 84) // clear the floating tab bar
+            .id(router.selectedTab)                       // fresh identity per tab…
+            .transition(.opacity)                          // …so this cross-fades
+            .animation(Motion.content, value: router.selectedTab)
+            .safeAreaPadding(.bottom, 84)                  // clear the floating bar
 
-            GlassTabBar(
-                items: [
-                    .init(tag: .subjects, systemImage: "square.stack.3d.up", label: "Subjects"),
-                    .init(tag: .search, systemImage: "sparkle.magnifyingglass", label: "Search"),
-                    .init(tag: .settings, systemImage: "gearshape", label: "Settings"),
-                ],
-                selection: $router.selectedTab
-            )
-            .padding(.horizontal, Space.xl)
+            // Floating chrome: capture button docked above the tab bar.
+            VStack(alignment: .trailing, spacing: Space.sm) {
+                HStack {
+                    Spacer()
+                    GlassIconButton(systemImage: "plus", accent: .aurora, filled: true) {
+                        router.sheet = .capture(nil)
+                    }
+                    .scaleEffect(1.15)
+                    .padding(.trailing, Space.lg)
+                }
+
+                GlassTabBar(
+                    items: [
+                        .init(tag: .library, systemImage: "sparkles.rectangle.stack", label: "Library"),
+                        .init(tag: .subjects, systemImage: "square.stack.3d.up", label: "Subjects"),
+                        .init(tag: .search, systemImage: "sparkle.magnifyingglass", label: "Search"),
+                        .init(tag: .settings, systemImage: "gearshape", label: "Settings"),
+                    ],
+                    selection: $router.selectedTab
+                )
+                .padding(.horizontal, Space.lg)
+            }
             .padding(.bottom, Space.xs)
         }
         .sheet(item: $router.sheet) { sheet in
             switch sheet {
-            case .newSubject:       SubjectEditorView(subject: nil)
+            case .capture(let s):     CaptureSheet(initialSubject: s)
+            case .newSubject:         SubjectEditorView(subject: nil)
             case .editSubject(let s): SubjectEditorView(subject: s)
-            case .newNote(let s):   NoteEditorView(subject: s)
-            case .settings:         SettingsView()
+            case .newNote(let s):     NoteEditorView(subject: s)
+            case .settings:           SettingsView()
             }
         }
-    }
-}
-
-private struct SearchPlaceholderView: View {
-    var body: some View {
-        ZStack {
-            EmptyStateView(systemImage: "sparkle.magnifyingglass",
-                           title: "Search",
-                           message: "Smart search across every subject, item, and transcript. Coming in Phase 4.")
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

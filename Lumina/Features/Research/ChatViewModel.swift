@@ -17,6 +17,9 @@ final class ChatViewModel {
     var liveText = ""          // assistant text as it streams
     var liveReasoning = ""     // summarized thinking as it streams
     var errorText: String?
+    /// The vault items grounding the latest question — drives the context
+    /// chips in the chat UI ("Claude is reading these").
+    var lastContextItems: [ContentItem] = []
 
     private var streamTask: Task<Void, Never>?
 
@@ -51,6 +54,7 @@ final class ChatViewModel {
 
         let history = thread.sortedMessages.filter { $0.id != assistant.id && $0.id != userMsg.id }
         let prompt = contextBuilder.buildPrompt(subject: subject, history: history, userQuestion: question)
+        lastContextItems = contextBuilder.relevantItems(in: subject, for: question)
 
         isStreaming = true
         liveText = ""

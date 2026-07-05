@@ -71,10 +71,34 @@ struct ResearchChatView: View {
         }
     }
 
+    // MARK: Context chips — the items grounding the current answer
+
+    @ViewBuilder private var contextStrip: some View {
+        if let vm, !vm.lastContextItems.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Space.xxs) {
+                    Label("Reading", systemImage: "sparkles")
+                        .luminaText(LuminaFont.caption2(), color: LuminaGradients.accentColor(accent))
+                    ForEach(vm.lastContextItems.prefix(6)) { item in
+                        TagChip(text: String(item.resolvedTitle.prefix(24)),
+                                systemImage: item.kind.systemImage,
+                                accent: accent)
+                    }
+                    if vm.lastContextItems.count > 6 {
+                        TagChip(text: "+\(vm.lastContextItems.count - 6)", accent: accent)
+                    }
+                }
+                .padding(.horizontal, Space.md)
+            }
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
     // MARK: Composer
 
     private var composer: some View {
         VStack(spacing: Space.xs) {
+            contextStrip
             if let err = vm?.errorText {
                 Text(err).luminaText(LuminaFont.caption(), color: LuminaColors.danger)
                     .frame(maxWidth: .infinity, alignment: .leading)

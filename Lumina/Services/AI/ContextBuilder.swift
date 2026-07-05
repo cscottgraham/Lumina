@@ -48,6 +48,12 @@ struct ContextBuilder {
 
     // MARK: Retrieval
 
+    /// The items that would ground an answer to `question` — public so the UI
+    /// can show "context chips" for exactly what Claude is reading.
+    func relevantItems(in subject: Subject, for question: String) -> [ContentItem] {
+        rank(items: subject.sortedItems, for: question)
+    }
+
     private func rank(items: [ContentItem], for question: String) -> [ContentItem] {
         let terms = Self.tokenize(question)
         func score(_ item: ContentItem) -> Double {

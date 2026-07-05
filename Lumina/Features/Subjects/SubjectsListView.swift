@@ -58,11 +58,22 @@ private struct SubjectCard: View {
                 Text(subject.title.isEmpty ? "Untitled" : subject.title)
                     .luminaText(LuminaFont.title2())
                     .lineLimit(2)
-                Text("\(subject.itemCount) item\(subject.itemCount == 1 ? "" : "s")")
-                    .luminaText(LuminaFont.caption(), color: LuminaColors.textSecondary)
+
+                Spacer(minLength: 0)
+
+                // Preview of contained items: up to three tiny thumbnails/kind
+                // tiles + the count.
+                HStack(spacing: Space.xxs) {
+                    ForEach(subject.sortedItems.prefix(3)) { item in
+                        MediaThumbnail(item: item, accent: subject.accent, side: 30)
+                    }
+                    Spacer(minLength: 0)
+                    Text("\(subject.itemCount)")
+                        .luminaText(LuminaFont.caption(), color: LuminaColors.textSecondary)
+                }
             }
         }
-        .frame(height: 150)
+        .frame(height: 168)
     }
 }
 
