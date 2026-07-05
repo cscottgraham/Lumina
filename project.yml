@@ -30,6 +30,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lumina.app
+        # Generate the Info.plist from the INFOPLIST_KEY_* settings below —
+        # required for code signing (the test host must be ad-hoc signed).
+        GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark          # dark-mode-first
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Lumina records voice notes and audio you attach to your research."
