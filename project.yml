@@ -7,6 +7,10 @@ options:
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
+  # Pin the generated project's file format to one Xcode 15.4 (the CI runner)
+  # can open — newest XcodeGen otherwise emits the Xcode 16 format
+  # (objectVersion 77) and xcodebuild refuses the project.
+  xcodeVersion: "15.4"
 
 settings:
   base:
