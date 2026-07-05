@@ -81,6 +81,36 @@ back onto it:
 - **Feedback loop**: `ContextBuilder` includes `aiSummary` in ranking and
   context, so enrichment makes future research chats smarter.
 
+## The research layer (QueryPlanner + tiered context)
+
+Every question flows through three stages before a single token is spent:
+
+1. **Plan (on-device, free)** — `QueryPlanner` classifies the question:
+   *general Q&A*, *"summarize all photos/audio/…"* (per-kind sweep),
+   *subject overview*, *compare X and Y* (fuzzy title match → focus items),
+   or *deep read* ("quote…", "full text…"). The plan sets the retrieval
+   filter, the item budget, the depth tier, and a steering instruction that
+   rides in the **uncached** volatile block (so it never invalidates the
+   prompt cache).
+2. **Select** — `ContextBuilder.select` scores items with field-weighted term
+   overlap (title ×3 > tags/topic ×2 > AI summary ×1.5 > body ×1) plus a
+   recency bonus. The AI summaries double as cheap semantic matching: because
+   enrichment normalizes vocabulary, meaning-level matches surface even when
+   the user's words differ from the item's.
+3. **Assemble, tiered** — by default each item contributes its **summary**
+   (enrichment note or head excerpt, ≤~420 chars). Only the plan's **focus
+   items** get **full text** (≤~2.6k chars, marked `[FULL]`). Media without
+   transcripts contribute a structured description line
+   (`[Photo — no description yet, 4032×3024]`) so Claude knows it exists.
+   Whole section is hard-capped (~12k chars ≈ 3k tokens).
+
+The chat UI mirrors the plan: the "Reading" strip shows exactly which items
+ground the answer (filled chips = sent at full depth), suggestion chips
+exercise each intent, and any answer can be **saved back into the vault** as a
+note (tagged `research-output`) — including the one-tap **research brief**
+(wand menu), a structured markdown output with findings / open questions /
+contradictions / next captures.
+
 ## Cost control
 
 1. **Prompt caching.** The stable subject context (digest + retrieved excerpts)

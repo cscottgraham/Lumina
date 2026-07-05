@@ -1,8 +1,10 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// The "magical" research chat: a glass conversation grounded in the subject's
-/// content, with a live streaming reply, a cost meter, and a model picker.
+/// content — planned per-question (QueryPlanner), tiered for cost
+/// (ContextBuilder), streamed live, with answers savable back into the vault.
 @MainActor
 struct ResearchChatView: View {
     let thread: ChatThread
@@ -24,7 +26,20 @@ struct ResearchChatView: View {
         }
         .navigationTitle(thread.subject?.title ?? "Research")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { costMeter } }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { costMeter }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        vm?.generateBrief(options: LLMOptions(model: thread.model,
+                                                              useAdaptiveThinking: useThinking))
+                    } label: {
+                        Label("Generate research brief", systemImage: "doc.text.magnifyingglass")
+                    }
+                } label: { Image(systemName: "wand.and.stars") }
+                .disabled(vm?.isStreaming ?? false)
+            }
+        }
         .onAppear { if vm == nil { vm = ChatViewModel(thread: thread, context: context) } }
     }
 
@@ -36,10 +51,13 @@ struct ResearchChatView: View {
                 LazyVStack(alignment: .leading, spacing: Space.md) {
                     if thread.sortedMessages.isEmpty && !(vm?.isStreaming ?? false) {
                         primer
+                        suggestions
                     }
                     ForEach(thread.sortedMessages) { msg in
                         MessageBubble(message: msg, accent: accent, liveText: liveText(for: msg),
-                                      liveReasoning: liveReasoning(for: msg))
+                                      liveReasoning: liveReasoning(for: msg),
+                                      onSaveNote: msg.role == .assistant && !msg.isStreaming
+                                          ? { vm?.saveAsNote(msg) } : nil)
                             .id(msg.id)
                     }
                 }
@@ -72,18 +90,32 @@ struct ResearchChatView: View {
         }
     }
 
+    /// Starter prompts — each exercises a planner intent (overview, per-kind
+    /// summarization, gap analysis).
+    private var suggestions: some View {
+        WrappingHStack(spacing: Space.xs) {
+            ForEach(ChatViewModel.suggestedPrompts, id: \.self) { prompt in
+                TagChipButton(text: prompt, systemImage: "sparkle", accent: accent) {
+                    vm?.send(prompt, options: LLMOptions(model: thread.model, useAdaptiveThinking: useThinking))
+                }
+            }
+        }
+    }
+
     // MARK: Context chips — the items grounding the current answer
 
     @ViewBuilder private var contextStrip: some View {
         if let vm, !vm.lastContextItems.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Space.xxs) {
-                    Label("Reading", systemImage: "sparkles")
+                    Label(vm.lastPlanLabel ?? "Reading", systemImage: "sparkles")
                         .luminaText(LuminaFont.caption2(), color: LuminaGradients.accentColor(accent))
                     ForEach(vm.lastContextItems.prefix(6)) { item in
+                        // FULL-depth items (comparisons/deep reads) show filled.
                         TagChip(text: String(item.resolvedTitle.prefix(24)),
                                 systemImage: item.kind.systemImage,
-                                accent: accent)
+                                accent: accent,
+                                filled: vm.lastFullDepthIDs.contains(item.id))
                     }
                     if vm.lastContextItems.count > 6 {
                         TagChip(text: "+\(vm.lastContextItems.count - 6)", accent: accent)
@@ -100,6 +132,12 @@ struct ResearchChatView: View {
     private var composer: some View {
         VStack(spacing: Space.xs) {
             contextStrip
+            if let toast = vm?.toast {
+                Label(toast, systemImage: "checkmark.circle.fill")
+                    .luminaText(LuminaFont.caption(), color: LuminaColors.success)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
             if let err = vm?.errorText {
                 Text(err).luminaText(LuminaFont.caption(), color: LuminaColors.danger)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -160,9 +198,21 @@ private struct MessageBubble: View {
     let accent: AccentTheme
     var liveText: String?
     var liveReasoning: String?
+    /// Present on finished assistant messages: turns the answer into a note.
+    var onSaveNote: (() -> Void)?
 
     private var displayText: String { liveText ?? message.text }
     private var isUser: Bool { message.role == .user }
+
+    /// Render assistant markdown (bold, italics, code, links) while keeping
+    /// whitespace; fall back to plain text if parsing fails.
+    private var rendered: AttributedString {
+        let text = displayText.isEmpty && message.isStreaming ? "…" : displayText
+        return (try? AttributedString(
+            markdown: text,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )) ?? AttributedString(text)
+    }
 
     var body: some View {
         HStack {
@@ -171,9 +221,19 @@ private struct MessageBubble: View {
                 if let reasoning = liveReasoning ?? message.reasoning, !reasoning.isEmpty {
                     ReasoningDisclosure(text: reasoning, accent: accent)
                 }
-                Text(displayText.isEmpty && message.isStreaming ? "…" : displayText)
+                Text(rendered)
                     .luminaText(LuminaFont.body(), color: LuminaColors.textPrimary)
                     .textSelection(.enabled)
+                    .contextMenu {
+                        if let onSaveNote {
+                            Button { onSaveNote() } label: {
+                                Label("Save as note", systemImage: "square.and.arrow.down.on.square")
+                            }
+                        }
+                        Button { UIPasteboard.general.string = displayText } label: {
+                            Label("Copy", systemImage: "doc.on.doc")
+                        }
+                    }
                     .padding(Space.md)
                     .background {
                         if isUser {
