@@ -58,6 +58,10 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=YES
 
+      # NOTE: no CODE_SIGNING_ALLOWED=NO here — the test harness must load the
+      # host app bundle, which requires the simulator's default ad-hoc signing
+      # (an unsigned host fails with "bundle identifier couldn't be read").
+      # Ad-hoc signing needs no team/certificates on the simulator.
       - name: Unit tests (simulator)
         run: |
           set -o pipefail
@@ -65,8 +69,7 @@ jobs:
             -project Lumina.xcodeproj \
             -scheme Lumina \
             -destination 'platform=iOS Simulator,name=iPhone 15' \
-            -resultBundlePath TestResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO
+            -resultBundlePath TestResults.xcresult
 
       - name: Upload test results (on failure)
         if: failure()
