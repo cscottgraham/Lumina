@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// Create or edit a Subject. Presented as a glass sheet.
+@MainActor
 struct SubjectEditorView: View {
     var subject: Subject?          // nil → create
     @Environment(\.modelContext) private var context

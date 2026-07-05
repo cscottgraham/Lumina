@@ -5,6 +5,7 @@ import SwiftData
 /// On save, `ItemEnrichmentService` evaluates the item with Claude in the
 /// background (toggle in Settings). Later phases add photo/video/audio capture
 /// and web-snippet clipping producing `ContentItem`s through the same path.
+@MainActor
 struct NoteEditorView: View {
     let subject: Subject
     @Environment(\.modelContext) private var context

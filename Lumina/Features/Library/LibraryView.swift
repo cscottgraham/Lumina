@@ -5,6 +5,7 @@ import SwiftData
 /// with a pinned (favorites) rail, glass search + kind filters, and
 /// pull-to-refresh (which also nudges enrichment for any items Claude hasn't
 /// evaluated yet). Tapping a card jumps to its subject.
+@MainActor
 struct LibraryView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var context

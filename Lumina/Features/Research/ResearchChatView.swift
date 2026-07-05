@@ -3,6 +3,7 @@ import SwiftData
 
 /// The "magical" research chat: a glass conversation grounded in the subject's
 /// content, with a live streaming reply, a cost meter, and a model picker.
+@MainActor
 struct ResearchChatView: View {
     let thread: ChatThread
     @Environment(\.modelContext) private var context

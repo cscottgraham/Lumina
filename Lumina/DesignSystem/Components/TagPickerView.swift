@@ -6,6 +6,7 @@ import SwiftData
 ///  • Typing filters the existing-tag pool; tapping a suggestion attaches it.
 ///  • Submitting text that matches nothing creates a new tag (via TagStore,
 ///    which enforces case-insensitive uniqueness).
+@MainActor
 struct TagPickerView: View {
     @Binding var selected: [Tag]
     var accent: AccentTheme = .aurora

@@ -4,6 +4,7 @@ import SwiftData
 /// The glass navigation shell: aurora backdrop, four tabs in the floating
 /// glass tab bar, and a gradient capture button docked above it. Tab content
 /// cross-fades; pushes use the system stack.
+@MainActor
 struct RootView: View {
     @Environment(AppRouter.self) private var router
 

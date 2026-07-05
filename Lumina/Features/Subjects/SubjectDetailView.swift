@@ -4,6 +4,7 @@ import SwiftData
 /// A subject's contents + the entry point into research chat and capture.
 /// The backdrop reflects the subject itself (its imagery, blurred under the
 /// accent aurora — see `SubjectBackdrop`). Items can be filtered by Topic.
+@MainActor
 struct SubjectDetailView: View {
     @Bindable var subject: Subject
     @Environment(AppRouter.self) private var router

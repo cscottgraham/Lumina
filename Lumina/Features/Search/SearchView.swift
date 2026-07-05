@@ -4,6 +4,7 @@ import SwiftData
 /// Global search: title, body/transcript, tags, AI notes, and subject names —
 /// with kind filters. Results render as full ContentItemCards; tapping jumps
 /// to the item's subject.
+@MainActor
 struct SearchView: View {
     @Environment(AppRouter.self) private var router
     @Query(sort: \ContentItem.updatedAt, order: .reverse) private var allItems: [ContentItem]

@@ -5,6 +5,7 @@ import SwiftData
 /// Text Note is fully wired (swaps this sheet for the note editor); Camera /
 /// Photos / Voice Dictation / Web Clip are Phase-2 surfaces — present, styled,
 /// and honest about it, so the muscle memory forms now.
+@MainActor
 struct CaptureSheet: View {
     /// Preselected subject (e.g. launched from a Subject screen); nil → pick.
     var initialSubject: Subject?

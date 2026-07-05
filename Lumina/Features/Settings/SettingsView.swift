@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// Settings — Claude API key management (Keychain), default model, and about.
+@MainActor
 struct SettingsView: View {
     @State private var apiKeyInput = ""
     @State private var hasKey = KeychainStore.shared.hasAPIKey

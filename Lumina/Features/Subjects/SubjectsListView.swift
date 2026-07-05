@@ -2,11 +2,20 @@ import SwiftUI
 import SwiftData
 
 /// Home screen: a glass grid of research subjects over the aurora.
+@MainActor
 struct SubjectsListView: View {
     @Environment(AppRouter.self) private var router
-    @Query(sort: [SortDescriptor(\Subject.isPinned, order: .reverse),
-                  SortDescriptor(\Subject.updatedAt, order: .reverse)])
+    // Bool isn't Comparable, so isPinned can't be a SortDescriptor —
+    // fetch by recency and float pinned subjects in memory.
+    @Query(sort: \Subject.updatedAt, order: .reverse)
     private var subjects: [Subject]
+
+    private var displaySubjects: [Subject] {
+        subjects.sorted {
+            if $0.isPinned != $1.isPinned { return $0.isPinned }
+            return $0.updatedAt > $1.updatedAt
+        }
+    }
 
     private let columns = [GridItem(.flexible(), spacing: Space.md),
                            GridItem(.flexible(), spacing: Space.md)]
@@ -21,7 +30,7 @@ struct SubjectsListView: View {
                     .frame(maxWidth: .infinity, minHeight: 420)
             } else {
                 LazyVGrid(columns: columns, spacing: Space.md) {
-                    ForEach(subjects) { subject in
+                    ForEach(displaySubjects) { subject in
                         SubjectCard(subject: subject)
                             .onTapGesture { router.openSubject(subject) }
                     }
