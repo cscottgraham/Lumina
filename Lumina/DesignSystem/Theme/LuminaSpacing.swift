@@ -11,10 +11,12 @@ enum Space {
     static let xxl: CGFloat = 48
 }
 
+/// Corner radii. Primary glass surfaces live in the 22–28pt band; `sm` is for
+/// nested elements (thumbnails, inner fields) so inner < outer always holds.
 enum Radius {
-    static let sm: CGFloat = 12
-    static let md: CGFloat = 18
-    static let lg: CGFloat = 26
-    static let xl: CGFloat = 34
+    static let sm: CGFloat = 14      // nested: thumbnails, inner fields
+    static let md: CGFloat = 22      // compact cards, inputs
+    static let lg: CGFloat = 26      // standard cards, sheets
+    static let xl: CGFloat = 28      // hero surfaces, alerts
     static let pill: CGFloat = 999
 }

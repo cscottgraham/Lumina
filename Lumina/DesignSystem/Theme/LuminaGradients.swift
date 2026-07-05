@@ -5,9 +5,11 @@ import SwiftUI
 enum LuminaGradients {
 
     /// The two-to-three stop colors that define an accent.
+    /// `aurora` (the default) is the house palette: teal → deep indigo → purple —
+    /// vibrant but sophisticated on the near-black canvas.
     static func stops(for accent: AccentTheme) -> [Color] {
         switch accent {
-        case .aurora: return [Color(hex: "#5EEAD4"), Color(hex: "#818CF8"), Color(hex: "#C084FC")]
+        case .aurora: return [Color(hex: "#2DD4BF"), Color(hex: "#4F46E5"), Color(hex: "#A855F7")]
         case .sunset: return [Color(hex: "#FBBF24"), Color(hex: "#FB7185"), Color(hex: "#E879F9")]
         case .ocean:  return [Color(hex: "#38BDF8"), Color(hex: "#22D3EE"), Color(hex: "#2DD4BF")]
         case .forest: return [Color(hex: "#4ADE80"), Color(hex: "#A3E635"), Color(hex: "#22D3EE")]

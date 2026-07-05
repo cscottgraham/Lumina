@@ -137,49 +137,10 @@ struct SubjectDetailView: View {
                 .luminaText(LuminaFont.callout(), color: LuminaColors.textSecondary)
                 .padding(.vertical, Space.md)
         } else {
+            // Kind-specific layouts (photo/video/audio/text/web) — see
+            // DesignSystem/Components/ContentItemCard.swift.
             ForEach(visibleItems) { item in
-                ContentItemRow(item: item, accent: accent)
-            }
-        }
-    }
-}
-
-// MARK: - Row
-
-private struct ContentItemRow: View {
-    let item: ContentItem
-    let accent: AccentTheme
-
-    var body: some View {
-        GlassCard(accent: accent, padding: Space.sm) {
-            HStack(spacing: Space.md) {
-                MediaThumbnail(item: item, accent: accent, side: 64)
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: Space.xxs) {
-                        Text(item.resolvedTitle).luminaText(LuminaFont.headline()).lineLimit(1)
-                        if !item.aiSummary.isEmpty {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 11))
-                                .foregroundStyle(LuminaGradients.accentColor(accent))
-                        }
-                    }
-                    if !item.text.isEmpty {
-                        Text(item.text).luminaText(LuminaFont.caption(), color: LuminaColors.textSecondary).lineLimit(2)
-                    }
-                    if let provenance = item.provenanceLine {
-                        Text(provenance).luminaText(LuminaFont.caption(), color: LuminaColors.textTertiary).lineLimit(1)
-                    }
-                    WrappingHStack(spacing: Space.xxs) {
-                        TagChip(text: item.kind.title, systemImage: item.kind.systemImage, accent: accent)
-                        if let topic = item.topic {
-                            TagChip(text: topic.displayTitle, systemImage: "folder", accent: accent)
-                        }
-                        ForEach(item.sortedTags.prefix(3)) { tag in
-                            TagChip(text: tag.name, accent: accent)
-                        }
-                    }
-                }
-                Spacer(minLength: 0)
+                ContentItemCard(item: item, accent: accent)
             }
         }
     }

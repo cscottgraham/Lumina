@@ -32,9 +32,16 @@ struct RootView: View {
             }
             .safeAreaPadding(.bottom, 84) // clear the floating tab bar
 
-            GlassTabBar(selected: $router.selectedTab)
-                .padding(.horizontal, Space.xl)
-                .padding(.bottom, Space.xs)
+            GlassTabBar(
+                items: [
+                    .init(tag: .subjects, systemImage: "square.stack.3d.up", label: "Subjects"),
+                    .init(tag: .search, systemImage: "sparkle.magnifyingglass", label: "Search"),
+                    .init(tag: .settings, systemImage: "gearshape", label: "Settings"),
+                ],
+                selection: $router.selectedTab
+            )
+            .padding(.horizontal, Space.xl)
+            .padding(.bottom, Space.xs)
         }
         .sheet(item: $router.sheet) { sheet in
             switch sheet {
@@ -44,39 +51,6 @@ struct RootView: View {
             case .settings:         SettingsView()
             }
         }
-    }
-}
-
-/// The custom glass tab bar.
-private struct GlassTabBar: View {
-    @Binding var selected: AppRouter.Tab
-
-    private let tabs: [(AppRouter.Tab, String, String)] = [
-        (.subjects, "square.stack.3d.up", "Subjects"),
-        (.search, "sparkle.magnifyingglass", "Search"),
-        (.settings, "gearshape", "Settings"),
-    ]
-
-    var body: some View {
-        HStack {
-            ForEach(tabs, id: \.0) { tab, icon, label in
-                Button {
-                    withAnimation(Motion.tap) { selected = tab }
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: icon).font(.system(size: 20, weight: .semibold))
-                        Text(label).font(LuminaFont.caption())
-                    }
-                    .foregroundStyle(selected == tab ? LuminaColors.textPrimary : LuminaColors.textTertiary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, Space.md)
-        .padding(.vertical, Space.xs)
-        .glass(cornerRadius: Radius.pill, accent: .aurora, strong: true)
     }
 }
 

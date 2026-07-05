@@ -49,8 +49,9 @@ private struct GlassButtonStyle: ButtonStyle {
                         .fill(LuminaGradients.linear(accent))
                         .shadow(color: LuminaGradients.accentColor(accent).opacity(0.5), radius: 14, y: 6)
                 case .secondary:
+                    // Buttons are chrome → regularMaterial for a solid press target.
                     RoundedRectangle(cornerRadius: Radius.pill, style: .continuous)
-                        .fill(.ultraThinMaterial)
+                        .fill(.regularMaterial)
                         .overlay(RoundedRectangle(cornerRadius: Radius.pill, style: .continuous)
                             .strokeBorder(LuminaColors.glassStroke, lineWidth: 1))
                 case .ghost:
@@ -90,7 +91,7 @@ struct GlassIconButton: View {
                         Circle().fill(LuminaGradients.linear(accent))
                             .shadow(color: LuminaGradients.accentColor(accent).opacity(0.5), radius: 12, y: 5)
                     } else {
-                        Circle().fill(.ultraThinMaterial)
+                        Circle().fill(.regularMaterial)
                             .overlay(Circle().strokeBorder(LuminaColors.glassStroke, lineWidth: 1))
                     }
                 }
