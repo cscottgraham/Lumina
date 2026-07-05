@@ -1,23 +1,28 @@
 import Foundation
 import Security
 
-/// Minimal Keychain wrapper for the Claude API key. The key never touches the
-/// SwiftData store, UserDefaults, or the repo.
+/// Minimal Keychain wrapper for LLM API keys — one slot per provider. Keys
+/// never touch the SwiftData store, UserDefaults, iCloud, or the repo.
 ///
-/// Production note: for an App Store build you'd typically proxy Claude calls
+/// Production note: for an App Store build you'd typically proxy LLM calls
 /// through your own backend rather than shipping a user-entered key — but for a
-/// personal vault, a Keychain-stored key called directly is appropriate.
+/// personal vault, Keychain-stored keys called directly are appropriate.
 struct KeychainStore {
     static let shared = KeychainStore()
     private let service = "com.lumina.app.secrets"
-    private let account = "anthropic_api_key"
 
-    func saveAPIKey(_ key: String) {
+    /// One Keychain account per provider.
+    enum KeyAccount: String {
+        case claude = "anthropic_api_key"
+        case grok = "xai_api_key"
+    }
+
+    func saveAPIKey(_ key: String, account: KeyAccount = .claude) {
         let data = Data(key.utf8)
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: account.rawValue,
         ]
         SecItemDelete(query as CFDictionary)
         query[kSecValueData as String] = data
@@ -25,11 +30,11 @@ struct KeychainStore {
         SecItemAdd(query as CFDictionary, nil)
     }
 
-    func apiKey() -> String? {
+    func apiKey(account: KeyAccount = .claude) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: account.rawValue,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
@@ -40,14 +45,17 @@ struct KeychainStore {
         return key
     }
 
-    func deleteAPIKey() {
+    func deleteAPIKey(account: KeyAccount = .claude) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: account.rawValue,
         ]
         SecItemDelete(query as CFDictionary)
     }
 
-    var hasAPIKey: Bool { apiKey() != nil }
+    func hasKey(account: KeyAccount) -> Bool { apiKey(account: account) != nil }
+
+    /// Legacy convenience (Claude slot) — existing call sites.
+    var hasAPIKey: Bool { apiKey(account: .claude) != nil }
 }

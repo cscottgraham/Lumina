@@ -86,18 +86,20 @@ enum ClaudeStreamEvent: Sendable {
     case done(stopReason: String?)
 }
 
+/// Shared error type for all LLM providers (Claude, Grok, …).
 enum ClaudeError: LocalizedError {
-    case missingAPIKey
+    case missingAPIKey(provider: String)
     case http(status: Int, body: String)
     case decoding(String)
     case network(String)
 
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey: return "No Claude API key set. Add one in Settings → Claude."
+        case .missingAPIKey(let provider):
+            return "No \(provider) API key set. Add one in Settings → AI Provider."
         case .http(let status, let body):
-            return "Claude API error \(status): \(body.prefix(300))"
-        case .decoding(let m): return "Couldn't read Claude's response: \(m)"
+            return "API error \(status): \(body.prefix(300))"
+        case .decoding(let m): return "Couldn't read the model's response: \(m)"
         case .network(let m): return "Network error: \(m)"
         }
     }

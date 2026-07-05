@@ -272,7 +272,7 @@ private struct ReaderViewer: View {
                 if !item.aiSummary.isEmpty {
                     GlassCard(accent: accent, vibrant: true) {
                         VStack(alignment: .leading, spacing: Space.xs) {
-                            Label("Claude's note", systemImage: "sparkles")
+                            Label("AI note", systemImage: "sparkles")
                                 .luminaText(LuminaFont.subheadline(), color: LuminaGradients.accentColor(accent))
                             Text(item.aiSummary)
                                 .luminaText(LuminaFont.callout(), color: LuminaColors.textSecondary)

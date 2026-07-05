@@ -31,7 +31,7 @@ struct ResearchChatView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        vm?.generateBrief(options: LLMOptions(model: thread.model,
+                        vm?.generateBrief(options: LLMOptions(modelID: thread.modelRaw,
                                                               useAdaptiveThinking: useThinking))
                     } label: {
                         Label("Generate research brief", systemImage: "doc.text.magnifyingglass")
@@ -96,7 +96,7 @@ struct ResearchChatView: View {
         WrappingHStack(spacing: Space.xs) {
             ForEach(ChatViewModel.suggestedPrompts, id: \.self) { prompt in
                 TagChipButton(text: prompt, systemImage: "sparkle", accent: accent) {
-                    vm?.send(prompt, options: LLMOptions(model: thread.model, useAdaptiveThinking: useThinking))
+                    vm?.send(prompt, options: LLMOptions(modelID: thread.modelRaw, useAdaptiveThinking: useThinking))
                 }
             }
         }
@@ -151,9 +151,13 @@ struct ResearchChatView: View {
                         .lineLimit(1...5)
                     Menu {
                         Picker("Model", selection: modelBinding) {
-                            ForEach(ClaudeModel.allCases) { m in Text(m.displayName).tag(m) }
+                            ForEach(ModelCatalog.chatModels(for: LLMProviderFactory.activeKind), id: \.id) { m in
+                                Text(m.name).tag(m.id)
+                            }
                         }
-                        Toggle("Deep thinking", isOn: $useThinking)
+                        if LLMProviderFactory.activeKind == .claude {
+                            Toggle("Deep thinking", isOn: $useThinking)
+                        }
                     } label: {
                         Image(systemName: "slider.horizontal.3").foregroundStyle(LuminaColors.textSecondary)
                     }
@@ -166,7 +170,7 @@ struct ResearchChatView: View {
                     GlassIconButton(systemImage: "stop.fill", accent: accent, filled: true) { vm?.cancel() }
                 } else {
                     GlassIconButton(systemImage: "arrow.up", accent: accent, filled: vm?.canSend ?? false) {
-                        vm?.send(options: LLMOptions(model: thread.model, useAdaptiveThinking: useThinking))
+                        vm?.send(options: LLMOptions(modelID: thread.modelRaw, useAdaptiveThinking: useThinking))
                     }
                     .disabled(!(vm?.canSend ?? false))
                 }
@@ -176,8 +180,8 @@ struct ResearchChatView: View {
         .background(.ultraThinMaterial.opacity(0.0))
     }
 
-    private var modelBinding: Binding<ClaudeModel> {
-        Binding(get: { thread.model }, set: { thread.model = $0; try? context.save() })
+    private var modelBinding: Binding<String> {
+        Binding(get: { thread.modelRaw }, set: { thread.modelRaw = $0; try? context.save() })
     }
 
     private var costMeter: some View {

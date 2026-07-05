@@ -53,13 +53,14 @@ extension ChatThread {
         sortedMessages.last.map { String($0.text.prefix(90)) } ?? ""
     }
 
-    /// Estimated USD spent on this thread so far.
+    /// Estimated USD spent on this thread so far. Prices resolve through
+    /// ModelCatalog so Claude and Grok model ids both work.
     var estimatedCostUSD: Double {
-        let m = model
-        return (Double(totalInputTokens) / 1_000_000) * m.inputPricePerMTok
-             + (Double(totalOutputTokens) / 1_000_000) * m.outputPricePerMTok
-             + (Double(totalCachedReadTokens) / 1_000_000) * m.cachedInputPricePerMTok
-             + (Double(totalCacheWriteTokens) / 1_000_000) * m.cacheWritePricePerMTok
+        let p = ModelCatalog.pricing(for: modelRaw)
+        return (Double(totalInputTokens) / 1_000_000) * p.inputPerMTok
+             + (Double(totalOutputTokens) / 1_000_000) * p.outputPerMTok
+             + (Double(totalCachedReadTokens) / 1_000_000) * p.cachedInputPerMTok
+             + (Double(totalCacheWriteTokens) / 1_000_000) * p.cacheWritePerMTok
     }
 
     func addUsage(_ usage: ClaudeUsage) {

@@ -31,7 +31,8 @@ final class ChatViewModel {
 
     private var streamTask: Task<Void, Never>?
 
-    init(thread: ChatThread, context: ModelContext, provider: LLMProvider = ClaudeClient()) {
+    init(thread: ChatThread, context: ModelContext,
+         provider: LLMProvider = LLMProviderFactory.current()) {
         self.thread = thread
         self.context = context
         self.provider = provider
@@ -126,7 +127,7 @@ final class ChatViewModel {
                                text: message.text,
                                subject: subject,
                                captureMethod: .imported)
-        note.sourceDetail = "Research chat · \(thread.model.displayName)"
+        note.sourceDetail = "Research chat · \(ModelCatalog.displayName(for: thread.modelRaw))"
         context.insert(note)
         let store = TagStore(context: context)
         if let tag = store.findOrCreate("research-output") { store.attach(tag, to: note) }

@@ -23,7 +23,9 @@ struct ClaudeClient: LLMProvider {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    guard let apiKey = keychain.apiKey() else { throw ClaudeError.missingAPIKey }
+                    guard let apiKey = keychain.apiKey(account: .claude) else {
+                        throw ClaudeError.missingAPIKey(provider: "Claude")
+                    }
 
                     var request = URLRequest(url: endpoint)
                     request.httpMethod = "POST"
@@ -86,7 +88,7 @@ struct ClaudeClient: LLMProvider {
         }
 
         let body = ClaudeRequest(
-            model: options.model.rawValue,
+            model: options.modelID,
             maxTokens: options.maxTokens,
             system: system,
             messages: prompt.messages,

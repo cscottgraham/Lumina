@@ -14,8 +14,9 @@ import SwiftData
 struct ItemEnrichmentService {
     static let enabledDefaultsKey = "enrichNewItems"
 
-    var provider: LLMProvider = ClaudeClient()
-    var model: ClaudeModel = .haiku45
+    /// Follows the active provider (Claude or Grok) with its cheap model.
+    var provider: LLMProvider = LLMProviderFactory.current()
+    var modelID: String = LLMProviderFactory.enrichmentModelID()
 
     static var isEnabled: Bool {
         UserDefaults.standard.object(forKey: enabledDefaultsKey) == nil
@@ -25,7 +26,7 @@ struct ItemEnrichmentService {
 
     /// Enrich one item in place. Safe to fire-and-forget from capture flows.
     func enrich(_ item: ContentItem, in context: ModelContext) async {
-        guard Self.isEnabled, KeychainStore.shared.hasAPIKey else { return }
+        guard Self.isEnabled, LLMProviderFactory.hasKeyForActiveProvider else { return }
         let body = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return }
         guard item.aiEnrichedAt == nil else { return } // don't re-enrich
@@ -51,7 +52,7 @@ struct ItemEnrichmentService {
 
         let prompt = LLMPrompt(cacheableContext: "", volatileInstructions: "",
                                messages: [.init(role: "user", content: question)])
-        let options = LLMOptions(model: model, maxTokens: 512,
+        let options = LLMOptions(modelID: modelID, maxTokens: 512,
                                  useAdaptiveThinking: false, enablePromptCaching: false)
 
         do {

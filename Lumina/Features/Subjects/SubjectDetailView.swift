@@ -68,8 +68,10 @@ struct SubjectDetailView: View {
     }
 
     private var researchButton: some View {
-        GlassButton("Research with Claude", systemImage: "sparkles", accent: accent, weight: .primary) {
+        GlassButton("Research with \(LLMProviderFactory.activeKind.displayName)",
+                    systemImage: "sparkles", accent: accent, weight: .primary) {
             let thread = ChatThread(subject: subject)
+            thread.modelRaw = LLMProviderFactory.defaultChatModelID()
             context.insert(thread)
             try? context.save()
             router.openResearch(thread)

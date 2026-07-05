@@ -1,4 +1,28 @@
-# Claude Integration
+# AI Integration (Claude + Grok)
+
+Lumina's research layer is **provider-pluggable** behind the `LLMProvider`
+protocol. Two providers ship; pick one in **Settings → AI Provider** (each has
+its own Keychain key slot). Everything upstream — QueryPlanner, ContextBuilder,
+the chat UI, enrichment, the cost meter — is provider-agnostic.
+
+| | Claude (`ClaudeClient`) | Grok (`GrokClient`) |
+| --- | --- | --- |
+| Endpoint | `api.anthropic.com/v1/messages` | `api.x.ai/v1/chat/completions` (OpenAI-compatible) |
+| System context | Cache-controlled system blocks (`cache_control`) | Single system message; xAI prefix caching is automatic |
+| Reasoning | Adaptive thinking (`display: summarized`) | Reasoning models stream `reasoning_content` natively |
+| Usage/cost | `usage` fields incl. cache read/write | `stream_options.include_usage` final chunk; `cached_tokens` mapped to cache reads |
+| Models | Opus 4.8 / Sonnet 5 / Haiku 4.5 | Grok 4.1 Fast (Reasoning / non) / Grok 4 |
+| Enrichment model | Haiku 4.5 | Grok 4.1 Fast (non-reasoning) |
+
+`ModelCatalog` resolves names + pricing from the raw model-id string stored on
+`ChatThread.modelRaw`, and `LLMProviderFactory` supplies the active client and
+per-provider defaults. Grok pricing in the catalog is approximate — verify at
+console.x.ai.
+
+The rest of this document details the Claude wire format; Grok's is the
+standard OpenAI chat-completions shape (see `GrokClient.swift` header).
+
+---
 
 Lumina calls Claude's **Messages API** directly over HTTPS (Anthropic ships no
 official Swift SDK, so raw HTTP is the correct path). All of it lives in

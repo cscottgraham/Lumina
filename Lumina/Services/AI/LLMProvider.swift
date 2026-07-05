@@ -13,8 +13,12 @@ struct LLMPrompt: Sendable {
 }
 
 struct LLMOptions: Sendable {
-    var model: ClaudeModel = .opus48
+    /// Raw model id — Claude ("claude-opus-4-8") or Grok ("grok-4-1-fast-…").
+    /// Resolve names/prices via `ModelCatalog`.
+    var modelID: String = ClaudeModel.opus48.rawValue
     var maxTokens: Int = 4096
+    /// Claude: adaptive thinking. Grok reasoning models stream reasoning on
+    /// their own; GrokClient ignores this flag.
     var useAdaptiveThinking: Bool = false
     var enablePromptCaching: Bool = true
 }
