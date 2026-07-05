@@ -100,7 +100,8 @@ struct ClaudeClient: LLMProvider {
     // MARK: SSE event decoding
 
     /// Decode one SSE JSON object into a distilled `ClaudeStreamEvent`.
-    private static func decodeEvent(_ data: Data, running: inout ClaudeUsage) throws -> ClaudeStreamEvent? {
+    /// Internal (not private) so LuminaTests can exercise the wire parsing.
+    static func decodeEvent(_ data: Data, running: inout ClaudeUsage) throws -> ClaudeStreamEvent? {
         struct Envelope: Decodable {
             let type: String
             let delta: Delta?

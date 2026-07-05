@@ -10,9 +10,11 @@ context, suggested tags). Built SwiftUI-first with a bespoke **glassmorphism**
 design system, dark-mode-first — each subject's backdrop reflects its own
 imagery under the aurora.
 
-> **Status:** foundation scaffold. Authored on Windows; **builds on macOS +
-> Xcode 15+**. See [`docs/BUILD_ON_MAC.md`](docs/BUILD_ON_MAC.md) for the
-> one-command first build.
+> **Status:** foundation scaffold, developed **entirely from Windows** — GitHub
+> Actions (macOS runners) is the compiler/test rig, TestFlight is the path onto
+> the iPhone. **Read [`docs/WINDOWS_WORKFLOW.md`](docs/WINDOWS_WORKFLOW.md)** —
+> it's the primary workflow. (`docs/BUILD_ON_MAC.md` covers the optional
+> local-Mac path if one ever becomes available.)
 
 ## What's here
 

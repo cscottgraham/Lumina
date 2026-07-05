@@ -1,0 +1,66 @@
+# iOS CI — the "compiler on Windows" for this project.
+#
+# Lumina is authored on a Windows machine; SwiftUI/SwiftData only compile on
+# macOS. Every push runs this workflow on a GitHub-hosted macOS runner:
+#   XcodeGen → xcodebuild build (iOS Simulator) → xcodebuild test.
+# Compile errors and test failures show up in the Actions tab (and `git push`
+# output links straight to the run). See docs/WINDOWS_WORKFLOW.md.
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test (iOS Simulator)
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode / simulators
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available | head -30
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (simulator, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Lumina.xcodeproj \
+            -scheme Lumina \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=YES
+
+      - name: Unit tests (simulator)
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Lumina.xcodeproj \
+            -scheme Lumina \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload test results (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          if-no-files-found: ignore

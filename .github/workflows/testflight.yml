@@ -1,0 +1,129 @@
+# TestFlight — signed build + upload to App Store Connect, entirely from CI.
+# This is how the app reaches a real iPhone WITHOUT ever touching a Mac:
+# Windows edit → push → run this workflow → install from the TestFlight app.
+#
+# ── Prerequisites (one-time; all doable from Windows) ─────────────────────────
+# 1. Apple Developer Program membership ($99/yr) — developer.apple.com.
+# 2. An App ID (com.lumina.app) + an app record in App Store Connect.
+# 3. A DISTRIBUTION CERTIFICATE — generated on Windows with OpenSSL
+#    (no Mac/Keychain Access needed; full steps in docs/WINDOWS_WORKFLOW.md):
+#      openssl genrsa -out lumina.key 2048
+#      openssl req -new -key lumina.key -out lumina.csr -subj "/CN=Lumina/O=You/C=CA"
+#      → upload lumina.csr at developer.apple.com → download distribution.cer →
+#      openssl x509 -inform DER -in distribution.cer -out distribution.pem
+#      openssl pkcs12 -export -inkey lumina.key -in distribution.pem \
+#          -out lumina.p12 -passout pass:<P12_PASSWORD>
+# 4. An App Store provisioning profile for com.lumina.app (developer portal).
+# 5. An App Store Connect API key (Users & Access → Integrations → App Store
+#    Connect API → Team key, role: App Manager). Download the .p8 once.
+#
+# ── Repository secrets (Settings → Secrets and variables → Actions) ──────────
+#   BUILD_CERTIFICATE_BASE64   base64 of lumina.p12
+#   P12_PASSWORD               password chosen above
+#   PROVISIONING_PROFILE_BASE64 base64 of the .mobileprovision
+#   APPSTORE_KEY_ID            App Store Connect API key id (e.g. 2X9R4HXF34)
+#   APPSTORE_ISSUER_ID         issuer id (UUID from the API keys page)
+#   APPSTORE_PRIVATE_KEY       full contents of the AuthKey_<KEYID>.p8 file
+#   DEVELOPMENT_TEAM           your 10-char Apple Team ID
+#
+#   (base64 on Windows PowerShell:
+#      [Convert]::ToBase64String([IO.File]::ReadAllBytes("lumina.p12")) | Set-Clipboard )
+#
+# Manual trigger only — run it from the Actions tab when you want a build on
+# your phone.
+name: TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Build number (increments per upload, e.g. 1, 2, 3…)"
+        required: true
+        default: "1"
+
+jobs:
+  deploy:
+    name: Archive & upload to TestFlight
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Import signing certificate + profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain-db
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $RUNNER_TEMP/cert.p12
+          security import $RUNNER_TEMP/cert.p12 -P "$P12_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo -n "$PROVISIONING_PROFILE_BASE64" | base64 --decode \
+            -o ~/Library/MobileDevice/Provisioning\ Profiles/lumina.mobileprovision
+
+      - name: Write App Store Connect API key
+        env:
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$APPSTORE_PRIVATE_KEY" > ~/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+
+      - name: Archive
+        env:
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project Lumina.xcodeproj \
+            -scheme Lumina \
+            -destination 'generic/platform=iOS' \
+            -archivePath $RUNNER_TEMP/Lumina.xcarchive \
+            DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
+            CURRENT_PROJECT_VERSION="${{ inputs.build_number }}" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER=lumina \
+            CODE_SIGN_IDENTITY="Apple Distribution"
+
+      - name: Export + upload to App Store Connect
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: |
+          cat > $RUNNER_TEMP/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${DEVELOPMENT_TEAM}</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict><key>com.lumina.app</key><string>lumina</string></dict>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/Lumina.xcarchive \
+            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/export \
+            -authenticationKeyPath ~/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
+            -authenticationKeyID "$APPSTORE_KEY_ID" \
+            -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID"
