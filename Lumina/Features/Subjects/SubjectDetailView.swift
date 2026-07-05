@@ -139,9 +139,13 @@ struct SubjectDetailView: View {
                 .padding(.vertical, Space.md)
         } else {
             // Kind-specific layouts (photo/video/audio/text/web) — see
-            // DesignSystem/Components/ContentItemCard.swift.
+            // DesignSystem/Components/ContentItemCard.swift. Tap → full-screen
+            // immersive viewer.
             ForEach(visibleItems) { item in
-                ContentItemCard(item: item, accent: accent)
+                Button { router.viewerItem = item } label: {
+                    ContentItemCard(item: item, accent: accent)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

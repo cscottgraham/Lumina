@@ -69,8 +69,13 @@ struct RootView: View {
             case .newSubject:         SubjectEditorView(subject: nil)
             case .editSubject(let s): SubjectEditorView(subject: s)
             case .newNote(let s):     NoteEditorView(subject: s)
+            case .dictateNote(let s): NoteEditorView(subject: s, startDictating: true)
             case .settings:           SettingsView()
             }
+        }
+        // Full-screen immersive media viewer (photo/video/audio/reader).
+        .fullScreenCover(item: $router.viewerItem) { item in
+            ItemViewerView(item: item)
         }
     }
 }

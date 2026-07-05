@@ -8,11 +8,16 @@ import SwiftData
 @MainActor
 struct NoteEditorView: View {
     let subject: Subject
+    /// Launch with live dictation running (the "Dictate Note" capture action).
+    var startDictating: Bool = false
+
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = ""
     @State private var text = ""
+    @State private var dictation = DictationService()
+    @State private var usedDictation = false
     @State private var selectedTopic: Topic?
     @State private var selectedTags: [Tag] = []
 
@@ -40,6 +45,8 @@ struct NoteEditorView: View {
                     .lineLimit(6...20)
                     .padding(Space.md).glass(cornerRadius: Radius.md, accent: accent)
 
+                dictationBar
+
                 section("Topic") { topicPicker }
                 section("Tags") { TagPickerView(selected: $selectedTags, accent: accent) }
                 section("Source") { metadataEditor }
@@ -52,6 +59,60 @@ struct NoteEditorView: View {
             Button("Create") { createTopic() }
             Button("Cancel", role: .cancel) { newTopicTitle = "" }
         }
+        .task {
+            if startDictating { await toggleDictation() }
+        }
+        .onDisappear { if dictation.isDictating { commitDictation() } }
+    }
+
+    // MARK: Dictation (Speech framework, live waveform)
+
+    @ViewBuilder private var dictationBar: some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(spacing: Space.sm) {
+                GlassIconButton(systemImage: dictation.isDictating ? "stop.fill" : "mic.fill",
+                                accent: accent, filled: dictation.isDictating) {
+                    Task { await toggleDictation() }
+                }
+                if dictation.isDictating {
+                    LiveWaveformView(levels: dictation.levels, accent: accent, maxBarHeight: 30)
+                } else {
+                    Text("Dictate — speech becomes note text")
+                        .luminaText(LuminaFont.caption(), color: LuminaColors.textTertiary)
+                    Spacer(minLength: 0)
+                }
+            }
+            if dictation.isDictating && !dictation.transcript.isEmpty {
+                Text(dictation.transcript)
+                    .luminaText(LuminaFont.callout(), color: LuminaColors.textSecondary)
+                    .lineLimit(4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if let err = dictation.errorText {
+                Text(err).luminaText(LuminaFont.caption(), color: LuminaColors.danger)
+            }
+        }
+        .padding(Space.sm)
+        .glass(cornerRadius: Radius.md, accent: accent, glow: false,
+               vibrant: dictation.isDictating)
+        .animation(Motion.content, value: dictation.isDictating)
+    }
+
+    private func toggleDictation() async {
+        if dictation.isDictating {
+            commitDictation()
+        } else {
+            await dictation.start()
+        }
+    }
+
+    /// Stop the session and append the transcript to the note body.
+    private func commitDictation() {
+        dictation.stop()
+        let spoken = dictation.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !spoken.isEmpty else { return }
+        text = text.isEmpty ? spoken : text + "\n" + spoken
+        usedDictation = true
     }
 
     // MARK: Sections
@@ -131,10 +192,12 @@ struct NoteEditorView: View {
     }
 
     private func save() {
+        if dictation.isDictating { commitDictation() }
         let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty || !title.isEmpty else { return }
 
-        let item = ContentItem(kind: .note, title: title, text: body, subject: subject)
+        let item = ContentItem(kind: .note, title: title, text: body, subject: subject,
+                               captureMethod: usedDictation ? .dictated : .typed)
         item.topic = selectedTopic
         item.capturedAt = capturedAt
         item.sourceDetail = sourceDetail.isEmpty ? nil : sourceDetail

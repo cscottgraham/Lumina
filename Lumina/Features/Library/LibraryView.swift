@@ -111,7 +111,7 @@ struct LibraryView: View {
 
     private func libraryCard(_ item: ContentItem) -> some View {
         Button {
-            if let subject = item.primarySubject { router.openSubject(subject) }
+            router.viewerItem = item        // full-screen immersive viewer
         } label: {
             ContentItemCard(item: item, accent: item.primarySubject?.accent ?? .aurora)
         }
@@ -121,6 +121,11 @@ struct LibraryView: View {
                 item.isFavorite.toggle(); try? context.save()
             } label: {
                 Label(item.isFavorite ? "Unpin" : "Pin", systemImage: item.isFavorite ? "pin.slash" : "pin")
+            }
+            if let subject = item.primarySubject {
+                Button { router.openSubject(subject) } label: {
+                    Label("Go to \(subject.title)", systemImage: "square.stack.3d.up")
+                }
             }
         }
     }

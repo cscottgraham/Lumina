@@ -19,16 +19,20 @@ Phases are cumulative; each ships something usable. ✅ = scaffolded in this rep
   related context, suggested tags. Settings toggle; feeds back into retrieval.
 - Settings: Keychain API key, default model, enrichment toggle.
 
-## Phase 2 — Full capture
-- Photo/video via `PhotosPicker` + camera; import through `MediaStore`,
-  thumbnails via `ThumbnailService` (both scaffolded).
-- Audio recording (AVAudioEngine) + on-device transcription (`SFSpeechRecognizer`)
-  → `ContentItem.text`, so voice notes are searchable and chat-visible.
-- Voice-dictated notes (live transcription into the note editor).
-- Web snippets: Share Extension → excerpt + metadata (URL, title, author, date).
-- Item detail screen: full-screen viewers (photo zoom, video player, audio
-  scrubber with transcript), edit metadata/tags/topic, view AI note.
-- Enrichment for media: run on transcripts/captions; later vision.
+## Phase 2 — Full capture ✅ (share extension pending)
+- ✅ Photo/video via `PhotosPicker` (file-based `Transferable` for large
+  videos) + system camera; centralized `MediaImportService` (metadata probe,
+  immediate thumbnails, enrichment hook).
+- ✅ Audio recording (`AVAudioRecorder`, live metered waveform) + post-record
+  transcription (`SFSpeechRecognizer`) → `ContentItem.text`.
+- ✅ Voice-dictated notes: live `Speech` transcription + waveform in the note
+  editor ("Dictate Note" capture action).
+- ✅ Web clips in-app: paste URL → title/description/author + og:image as the
+  screenshot attachment (`WebMetadataService`). ⏳ Share Extension (separate
+  app target) still to come.
+- ✅ Full-screen immersive viewers with glass chrome: photo zoom/pan
+  (downsampled load), AVKit video, audio scrubber + transcript, glass reader.
+- ✅ Enrichment runs on transcripts/snippet text; vision for photos in Phase 4.
 
 ## Phase 3 — Sync & resilience
 - Flip media storage to the iCloud ubiquity container (SwiftData already syncs).

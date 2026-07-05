@@ -51,11 +51,18 @@ struct SearchView: View {
                         .luminaOverline()
                     ForEach(results) { item in
                         Button {
-                            if let subject = item.primarySubject { router.openSubject(subject) }
+                            router.viewerItem = item
                         } label: {
                             ContentItemCard(item: item, accent: item.primarySubject?.accent ?? .aurora)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            if let subject = item.primarySubject {
+                                Button { router.openSubject(subject) } label: {
+                                    Label("Go to \(subject.title)", systemImage: "square.stack.3d.up")
+                                }
+                            }
+                        }
                         .transition(.scale(scale: 0.96).combined(with: .opacity))
                     }
                 }

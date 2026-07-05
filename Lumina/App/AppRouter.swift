@@ -13,6 +13,10 @@ final class AppRouter {
     /// Currently presented modal, if any.
     var sheet: Sheet?
 
+    /// Item shown in the full-screen media viewer (nil → closed). Global so
+    /// any list (Library, Search, Subject Detail) can open it.
+    var viewerItem: ContentItem?
+
     enum Route: Hashable {
         case subject(Subject)
         case research(ChatThread)
@@ -23,6 +27,7 @@ final class AppRouter {
         case newSubject
         case editSubject(Subject)
         case newNote(Subject)
+        case dictateNote(Subject)       // note editor with dictation running
         case settings
 
         var id: String {
@@ -31,6 +36,7 @@ final class AppRouter {
             case .newSubject: return "newSubject"
             case .editSubject(let s): return "editSubject-\(s.id)"
             case .newNote(let s): return "newNote-\(s.id)"
+            case .dictateNote(let s): return "dictateNote-\(s.id)"
             case .settings: return "settings"
             }
         }
