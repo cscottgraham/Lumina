@@ -50,8 +50,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      # Pinned for the same reason as ios-ci.yml: newer XcodeGen emits a
+      # project format the runner's Xcode can't read.
+      - name: Install XcodeGen (pinned 2.42.0)
+        run: |
+          curl -sL -o /tmp/xcodegen.zip \
+            https://github.com/yonaskolb/XcodeGen/releases/download/2.42.0/xcodegen.zip
+          unzip -q /tmp/xcodegen.zip -d /tmp/xcodegen-dist
+          XG_BIN=$(find /tmp/xcodegen-dist -name xcodegen -type f -not -path '*share*' | head -1)
+          echo "$(dirname "$XG_BIN")" >> "$GITHUB_PATH"
+          chmod +x "$XG_BIN"
 
       - name: Generate Xcode project
         run: xcodegen generate

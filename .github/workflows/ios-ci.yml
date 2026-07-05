@@ -31,8 +31,19 @@ jobs:
           xcodebuild -version
           xcrun simctl list devices available | head -30
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      # Pinned, not brewed: XcodeGen ≥2.43 always emits the Xcode 16 project
+      # format (objectVersion 77), which this runner's Xcode 15.4 cannot open
+      # (project.yml's xcodeVersion hint doesn't override it). 2.42.0 is the
+      # last release producing Xcode 15-readable projects.
+      - name: Install XcodeGen (pinned 2.42.0)
+        run: |
+          curl -sL -o /tmp/xcodegen.zip \
+            https://github.com/yonaskolb/XcodeGen/releases/download/2.42.0/xcodegen.zip
+          unzip -q /tmp/xcodegen.zip -d /tmp/xcodegen-dist
+          XG_BIN=$(find /tmp/xcodegen-dist -name xcodegen -type f -not -path '*share*' | head -1)
+          echo "$(dirname "$XG_BIN")" >> "$GITHUB_PATH"
+          chmod +x "$XG_BIN"
+          "$XG_BIN" --version
 
       - name: Generate Xcode project
         run: xcodegen generate
