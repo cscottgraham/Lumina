@@ -30,10 +30,16 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cscottgraham.lumina
+        # iPhone-only (iPads run it in compatibility mode) — avoids the iPad
+        # icon/orientation matrix App Store validation otherwise demands.
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Generate the Info.plist from the INFOPLIST_KEY_* settings below —
         # required for code signing (the test host must be ad-hoc signed).
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_UILaunchScreen_Generation: true
+        # App Store validation requires declared orientations.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark          # dark-mode-first
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Lumina records voice notes and audio you attach to your research."
         INFOPLIST_KEY_NSCameraUsageDescription: "Lumina captures photos and videos for your research subjects."
