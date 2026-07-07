@@ -3,7 +3,7 @@
 # Then: open Lumina.xcodeproj  (see docs/BUILD_ON_MAC.md)
 name: Lumina
 options:
-  bundleIdPrefix: com.lumina
+  bundleIdPrefix: com.cscottgraham
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
@@ -29,7 +29,7 @@ targets:
       - path: Lumina
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.lumina.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.cscottgraham.lumina
         # Generate the Info.plist from the INFOPLIST_KEY_* settings below —
         # required for code signing (the test host must be ad-hoc signed).
         GENERATE_INFOPLIST_FILE: true
@@ -49,7 +49,7 @@ targets:
       path: Lumina/Lumina.entitlements
       properties:
         com.apple.developer.icloud-container-identifiers:
-          - iCloud.com.lumina.app
+          - iCloud.com.cscottgraham.lumina
         com.apple.developer.icloud-services:
           - CloudKit
         # No aps-environment: we don't use push directly, and declaring
@@ -64,7 +64,7 @@ targets:
       - target: Lumina
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.lumina.app.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.cscottgraham.lumina.tests
         GENERATE_INFOPLIST_FILE: true
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Lumina.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lumina"
         BUNDLE_LOADER: "$(TEST_HOST)"

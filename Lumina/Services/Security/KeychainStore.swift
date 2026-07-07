@@ -9,7 +9,7 @@ import Security
 /// personal vault, Keychain-stored keys called directly are appropriate.
 struct KeychainStore {
     static let shared = KeychainStore()
-    private let service = "com.lumina.app.secrets"
+    private let service = "com.cscottgraham.lumina.secrets"
 
     /// One Keychain account per provider.
     enum KeyAccount: String {

@@ -9,7 +9,7 @@ import SwiftData
 /// CloudKit requirements (already satisfied by the models): every attribute has
 /// a default or is optional, all relationships are optional, no `.unique`
 /// constraints. Enable the iCloud + CloudKit capability in Xcode with container
-/// `iCloud.com.lumina.app` (see project.yml entitlements).
+/// `iCloud.com.cscottgraham.lumina` (see project.yml entitlements).
 enum PersistenceController {
 
     /// The schema is always derived from the CURRENT versioned schema so the

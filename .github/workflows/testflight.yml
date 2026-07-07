@@ -4,7 +4,7 @@
 #
 # ── Prerequisites (one-time; all doable from Windows) ─────────────────────────
 # 1. Apple Developer Program membership ($99/yr) — developer.apple.com.
-# 2. An App ID (com.lumina.app) + an app record in App Store Connect.
+# 2. An App ID (com.cscottgraham.lumina) + an app record in App Store Connect.
 # 3. A DISTRIBUTION CERTIFICATE — generated on Windows with OpenSSL
 #    (no Mac/Keychain Access needed; full steps in docs/WINDOWS_WORKFLOW.md):
 #      openssl genrsa -out lumina.key 2048
@@ -13,7 +13,7 @@
 #      openssl x509 -inform DER -in distribution.cer -out distribution.pem
 #      openssl pkcs12 -export -inkey lumina.key -in distribution.pem \
 #          -out lumina.p12 -passout pass:<P12_PASSWORD>
-# 4. An App Store provisioning profile for com.lumina.app (developer portal).
+# 4. An App Store provisioning profile for com.cscottgraham.lumina (developer portal).
 # 5. An App Store Connect API key (Users & Access → Integrations → App Store
 #    Connect API → Team key, role: App Manager). Download the .p8 once.
 #
@@ -125,7 +125,7 @@ jobs:
             <key>teamID</key><string>${DEVELOPMENT_TEAM}</string>
             <key>signingStyle</key><string>manual</string>
             <key>provisioningProfiles</key>
-            <dict><key>com.lumina.app</key><string>lumina</string></dict>
+            <dict><key>com.cscottgraham.lumina</key><string>lumina</string></dict>
           </dict></plist>
           EOF
           xcodebuild -exportArchive \

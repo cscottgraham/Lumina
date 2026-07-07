@@ -27,7 +27,7 @@ In Xcode:
 
 1. **Signing & Capabilities** → select your Team. (Or set `DEVELOPMENT_TEAM`
    in `project.yml` and regenerate.)
-2. Add capability **iCloud** → CloudKit → container `iCloud.com.lumina.app`
+2. Add capability **iCloud** → CloudKit → container `iCloud.com.cscottgraham.lumina`
    (must match `PersistenceController` / entitlements). If you skip this,
    the app still runs — `PersistenceController` falls back to a local-only
    store — you just won't sync.

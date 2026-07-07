@@ -43,7 +43,7 @@ cd Lumina
 xcodegen generate      # creates Lumina.xcodeproj
 open Lumina.xcodeproj
 # In Xcode: set your Team ID (Signing & Capabilities), add the iCloud/CloudKit
-# capability with container iCloud.com.lumina.app, then Run on a device/simulator.
+# capability with container iCloud.com.cscottgraham.lumina, then Run on a device/simulator.
 ```
 
 Add your Claude API key in-app: **Settings → Claude → API Key** (stored in the

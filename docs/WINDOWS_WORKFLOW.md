@@ -53,7 +53,7 @@ One-time setup, all from Windows (~1 evening):
    openssl x509 -inform DER -in distribution.cer -out distribution.pem
    openssl pkcs12 -export -inkey lumina.key -in distribution.pem -out lumina.p12
    ```
-3. **App ID + provisioning profile** — portal: register `com.lumina.app`
+3. **App ID + provisioning profile** — portal: register `com.cscottgraham.lumina`
    (capabilities: iCloud/CloudKit, Push), create an **App Store** provisioning
    profile named `lumina` for it.
 4. **App record** — App Store Connect → New App (TestFlight needs it; the app
