@@ -107,7 +107,7 @@ jobs:
             DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
             CURRENT_PROJECT_VERSION="${{ inputs.build_number }}" \
             CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER=lumina \
+            PROVISIONING_PROFILE_SPECIFIER=lumina.mobileprovision \
             CODE_SIGN_IDENTITY="Apple Distribution"
 
       - name: Export + upload to App Store Connect
@@ -125,7 +125,7 @@ jobs:
             <key>teamID</key><string>${DEVELOPMENT_TEAM}</string>
             <key>signingStyle</key><string>manual</string>
             <key>provisioningProfiles</key>
-            <dict><key>com.cscottgraham.lumina</key><string>lumina</string></dict>
+            <dict><key>com.cscottgraham.lumina</key><string>lumina.mobileprovision</string></dict>
           </dict></plist>
           EOF
           xcodebuild -exportArchive \
