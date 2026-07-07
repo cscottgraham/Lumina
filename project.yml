@@ -17,7 +17,7 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.9"
-    DEVELOPMENT_TEAM: "" # ← set your Apple Developer Team ID here
+    DEVELOPMENT_TEAM: "XXT4W9Z5V4" # Apple Developer Team ID (Christopher Scott Graham)
     CODE_SIGN_STYLE: Automatic
     ENABLE_PREVIEWS: true
 
