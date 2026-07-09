@@ -18,6 +18,10 @@ struct GlassCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .glass(cornerRadius: cornerRadius, accent: accent, depth: depth,
                    strong: strong, vibrant: vibrant)
+            // Guarantees the full card is one hit-testable region — without
+            // this, a bare .onTapGesture/Button wrapping a card whose content
+            // includes Spacers or padding can silently miss taps in those areas.
+            .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 

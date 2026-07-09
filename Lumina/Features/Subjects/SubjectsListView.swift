@@ -31,8 +31,12 @@ struct SubjectsListView: View {
             } else {
                 LazyVGrid(columns: columns, spacing: Space.md) {
                     ForEach(displaySubjects) { subject in
-                        SubjectCard(subject: subject)
-                            .onTapGesture { router.openSubject(subject) }
+                        Button {
+                            router.openSubject(subject)
+                        } label: {
+                            SubjectCard(subject: subject)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(Space.md)
