@@ -21,6 +21,13 @@ extension LuminaSchemaV1 {
         var createdAt: Date = Date()
         var updatedAt: Date = Date()
 
+        /// A photo/video item the user has explicitly pinned as this subject's
+        /// backdrop. `nil` → the backdrop auto-follows the newest photo/video
+        /// (see `backdropMediaItem`). Stored as the item's `id` rather than a
+        /// relationship: the target is always one of this subject's own items,
+        /// so a soft reference keeps the ContentItem model untouched.
+        var backdropItemID: UUID? = nil
+
         /// The user's own subject-level scratchpad (markdown): hypotheses,
         /// open questions, reading lists. Distinct from `digest` (AI-written)
         /// and from ContentItems (captured material). Fed to Claude as part of
@@ -115,9 +122,41 @@ extension Subject {
         (threads ?? []).reduce(0) { $0 + $1.estimatedCostUSD }
     }
 
-    /// The newest photo/video item that has media — drives `SubjectBackdrop`.
+    /// The newest photo/video item that has media.
     var heroMediaItem: ContentItem? {
         sortedItems.first { ($0.kind == .photo || $0.kind == .video) && $0.primaryAttachment != nil }
+    }
+
+    /// Whether a given item can serve as a backdrop (photo/video with media).
+    static func canBeBackdrop(_ item: ContentItem) -> Bool {
+        (item.kind == .photo || item.kind == .video) && item.primaryAttachment != nil
+    }
+
+    /// The item that drives `SubjectBackdrop`: the user's pinned choice if it
+    /// still exists and has media, otherwise the newest photo/video.
+    var backdropMediaItem: ContentItem? {
+        if let id = backdropItemID,
+           let pinned = (items ?? []).first(where: { $0.id == id }),
+           Subject.canBeBackdrop(pinned) {
+            return pinned
+        }
+        return heroMediaItem
+    }
+
+    /// True when `item` is the currently pinned backdrop.
+    func isBackdrop(_ item: ContentItem) -> Bool { backdropItemID == item.id }
+
+    /// Pin `item` as the backdrop (no-op for non-media items).
+    func pinBackdrop(_ item: ContentItem) {
+        guard Subject.canBeBackdrop(item) else { return }
+        backdropItemID = item.id
+        touch()
+    }
+
+    /// Clear any pinned backdrop, reverting to the auto (newest media) behavior.
+    func clearBackdrop() {
+        backdropItemID = nil
+        touch()
     }
 
     func touch() { updatedAt = Date() }

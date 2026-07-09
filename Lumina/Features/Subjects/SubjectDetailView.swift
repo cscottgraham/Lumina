@@ -133,6 +133,14 @@ struct SubjectDetailView: View {
             }
             .fixedSize()
         }
+        if let current = subject.backdropMediaItem, subject.backdropItemID != nil {
+            Button { subject.clearBackdrop(); try? context.save() } label: {
+                Label("Backdrop: \(current.resolvedTitle) — tap to reset to newest",
+                      systemImage: "photo.badge.checkmark")
+                    .luminaText(LuminaFont.caption(), color: LuminaGradients.accentColor(accent))
+            }
+            .buttonStyle(.plain)
+        }
         if visibleItems.isEmpty {
             Text(selectedTopic == nil
                  ? "No items yet. Capture a note, photo, or web snippet to build context for research."
@@ -148,6 +156,22 @@ struct SubjectDetailView: View {
                     ContentItemCard(item: item, accent: accent)
                 }
                 .buttonStyle(.plain)
+                .contextMenu { backdropMenu(for: item) }
+            }
+        }
+    }
+
+    /// Context-menu actions for pinning a photo/video as the subject backdrop.
+    @ViewBuilder private func backdropMenu(for item: ContentItem) -> some View {
+        if Subject.canBeBackdrop(item) {
+            if subject.isBackdrop(item) {
+                Button { subject.clearBackdrop(); try? context.save() } label: {
+                    Label("Remove as backdrop", systemImage: "photo.badge.arrow.down")
+                }
+            } else {
+                Button { subject.pinBackdrop(item); try? context.save() } label: {
+                    Label("Set as backdrop", systemImage: "photo.badge.checkmark")
+                }
             }
         }
     }
